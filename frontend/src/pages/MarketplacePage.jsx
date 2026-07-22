@@ -1,35 +1,36 @@
-import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  Search, SlidersHorizontal, ShoppingCart, Star,
-  MapPin, ChevronDown, X, Filter, Leaf, Heart,
-  Plus, Minus, Eye
+  Search, ChevronDown, ShoppingCart, Star,
+  MapPin, X, Filter, Leaf, Heart,
+  Plus, Minus, Eye, User, Package, MessageCircle, LogOut
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 // ─── Mock Product Data ─────────────────────────────────────────────────────
 const allProducts = [
   {
     id: 1, name: 'Fresh Tomatoes', farm: 'Green Valley Farms', location: 'Kumasi, Ashanti',
     price: 12, unit: 'kg', category: 'vegetables', rating: 4.8, reviews: 319,
-    image: 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=400&q=70',
+    image: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: 'Best Seller',
   },
   {
     id: 2, name: 'Red Pepper', farm: 'Ama Organic Farm', location: 'Ejisu, Ashanti',
     price: 15, unit: 'kg', category: 'vegetables', rating: 4.7, reviews: 196,
-    image: 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=400&q=70',
+    image: 'https://images.unsplash.com/photo-1562967916-eb82221dfb35?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: '',
   },
   {
     id: 3, name: 'Fresh Maize', farm: 'Happy Farm', location: 'Ejisu, Ashanti',
     price: 8, unit: 'kg', category: 'grains', rating: 4.4, reviews: 110,
-    image: 'https://images.unsplash.com/photo-1601593346740-925612772716?auto=format&fit=crop&w=400&q=70',
+    image: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: '',
   },
   {
     id: 4, name: 'Cassava', farm: 'Nkompong Farm', location: 'Kumasi, Ashanti',
     price: 6, unit: 'kg', category: 'tubers', rating: 4.5, reviews: 98,
-    image: 'https://images.unsplash.com/photo-1631207558636-d24c18bcfd6e?auto=format&fit=crop&w=400&q=70',
+    image: 'https://images.unsplash.com/photo-1524592412331-4fe04e37381d?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: '',
   },
   {
@@ -71,7 +72,7 @@ const allProducts = [
   {
     id: 11, name: 'Brown Rice', farm: 'Happy Farm', location: 'Ejisu, Ashanti',
     price: 14, unit: 'kg', category: 'grains', rating: 4.5, reviews: 88,
-    image: 'https://images.unsplash.com/photo-1516684732162-798a0062be99?auto=format&fit=crop&w=400&q=70',
+    image: 'https://images.unsplash.com/photo-1577449923886-df3d846797af?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: 'Organic',
   },
   {
@@ -99,6 +100,16 @@ const sortOptions = [
 ];
 
 // ─── Star Rating Component ─────────────────────────────────────────────────
+function escapeSvgText(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function getCropFallbackImage(name) {
+  const label = escapeSvgText(name);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2e7d32"/><stop offset="100%" stop-color="#66bb6a"/></linearGradient></defs><rect width="400" height="300" rx="32" fill="url(#g)"/><text x="50%" y="42%" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="74" fill="#ffffff">🍃</text><text x="50%" y="72%" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="28" fill="#e8f5e9">${label}</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 function Stars({ rating }) {
   return (
     <div className="mp-stars">
@@ -117,11 +128,24 @@ function Stars({ rating }) {
 // ─── Product Card ──────────────────────────────────────────────────────────
 function ProductCard({ product, cartQty, onAddToCart }) {
   const [wished, setWished] = useState(false);
+  const [imageSrc, setImageSrc] = useState(product.image);
+
+  const handleImageError = () => {
+    const fallback = getCropFallbackImage(product.name);
+    if (imageSrc !== fallback) {
+      setImageSrc(fallback);
+    }
+  };
 
   return (
     <div className={`mp-product-card ${!product.inStock ? 'out-of-stock' : ''}`}>
       <div className="mp-product-img-wrap">
-        <img src={product.image} alt={product.name} className="mp-product-img" />
+        <img
+          src={imageSrc}
+          alt={product.name}
+          className="mp-product-img"
+          onError={handleImageError}
+        />
         {product.badge && <span className="mp-product-badge">{product.badge}</span>}
         {!product.inStock && <div className="mp-out-of-stock-overlay">Out of Stock</div>}
         <button
@@ -173,6 +197,8 @@ function ProductCard({ product, cartQty, onAddToCart }) {
 
 // ─── Main Marketplace Page ─────────────────────────────────────────────────
 export default function MarketplacePage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [location, setLocation] = useState('All Locations');
@@ -180,16 +206,38 @@ export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState('newest');
   const [cart, setCart] = useState({}); // { productId: qty }
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef = useRef(null);
 
   // Total cart items count
   const totalCartItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+
+  useEffect(() => {
+    const handleDocumentClick = (event) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(event.target)) {
+        setAvatarMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    return () => document.removeEventListener('mousedown', handleDocumentClick);
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+
+  const handleGoBack = () => {
+    navigate('/');
+  };
 
   const handleCartChange = (product, delta) => {
     setCart(prev => {
       const current = prev[product.id] || 0;
       const next = Math.max(0, current + delta);
       if (next === 0) {
-        const { [product.id]: _, ...rest } = prev;
+        const { [product.id]: removed, ...rest } = prev;
         return rest;
       }
       return { ...prev, [product.id]: next };
@@ -302,7 +350,69 @@ export default function MarketplacePage() {
                 <span className="mp-cart-badge">{totalCartItems}</span>
               )}
             </button>
-            <div className="mp-topbar-avatar">NK</div>
+            <div className="mp-user-menu-wrapper" ref={avatarMenuRef}>
+              <button
+                type="button"
+                className="mp-topbar-avatar mp-topbar-avatar-button"
+                onClick={() => setAvatarMenuOpen(open => !open)}
+                aria-expanded={avatarMenuOpen}
+                aria-haspopup="menu"
+              >
+                <span>{user?.name ? user.name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase() : 'NK'}</span>
+                <ChevronDown size={14} />
+              </button>
+
+              {avatarMenuOpen && (
+                <div className="mp-avatar-dropdown" role="menu">
+                  <div className="mp-avatar-dropdown-header">
+                    <div className="mp-avatar-dropdown-name">{user?.name || 'AgriLink User'}</div>
+                    <div className="mp-avatar-dropdown-email">{user?.email || 'user@example.com'}</div>
+                  </div>
+                  <div className="mp-avatar-dropdown-divider" />
+                  <button
+                    type="button"
+                    className="mp-avatar-dropdown-item"
+                    onClick={() => setAvatarMenuOpen(false)}
+                  >
+                    <User size={18} className="mp-avatar-dropdown-item-icon" />
+                    <span>My Profile</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="mp-avatar-dropdown-item"
+                    onClick={() => setAvatarMenuOpen(false)}
+                  >
+                    <Package size={18} className="mp-avatar-dropdown-item-icon" />
+                    <span>My Orders</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="mp-avatar-dropdown-item"
+                    onClick={() => setAvatarMenuOpen(false)}
+                  >
+                    <Heart size={18} className="mp-avatar-dropdown-item-icon" />
+                    <span>My Favourites</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="mp-avatar-dropdown-item"
+                    onClick={() => setAvatarMenuOpen(false)}
+                  >
+                    <MessageCircle size={18} className="mp-avatar-dropdown-item-icon" />
+                    <span>Messages</span>
+                  </button>
+                  <div className="mp-avatar-dropdown-divider" />
+                  <button
+                    type="button"
+                    className="mp-avatar-dropdown-item mp-avatar-dropdown-logout"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={18} className="mp-avatar-dropdown-item-icon mp-avatar-dropdown-item-icon-logout" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -409,14 +519,9 @@ export default function MarketplacePage() {
         <button
           type="button"
           className="mp-bottom-logout-btn"
-          onClick={() => {
-            // delegate to existing navbar logout behavior via navigation.
-            // In this demo app, we simply go home; real logout is handled in Navbar.
-            // (If you want real logout here, we can wire useAuth().logout.)
-            window.location.href = '/';
-          }}
+          onClick={handleGoBack}
         >
-          Logout
+          ← Go Back
         </button>
       </div>
     </div>
