@@ -10,7 +10,6 @@ import {
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Sprout, label: 'My Crops', path: '/dashboard/crops' },
-
   { icon: ShoppingCart, label: 'Orders', path: '/dashboard/orders' },
   { icon: BookOpen, label: 'Farm Blog', path: '/dashboard/blog' },
   { icon: User, label: 'Profile', path: '/dashboard/profile' },
@@ -18,13 +17,26 @@ const navItems = [
   { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
 ];
 
-
+function getInitials(name) {
+  if (!name) return 'F';
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+
+  const initials = getInitials(user?.name);
+  const displayName = user?.name || 'Farmer';
+  const farmName = user?.farmName || user?.farm_name || user?.name || 'My Farm';
+  const isVerified = user?.verification_status === 'verified' || user?.status === 'verified';
 
   function handleLogout() {
     logout();
@@ -46,12 +58,12 @@ export default function DashboardLayout({ children }) {
         </div>
 
         <div className="sidebar-farmer-profile">
-          <div className="sidebar-avatar">GV</div>
+          <div className="sidebar-avatar">{initials}</div>
           <div className="sidebar-farmer-info">
-            <div className="sidebar-farmer-name">Green Valley Farms</div>
+            <div className="sidebar-farmer-name">{displayName}</div>
             <div className="sidebar-farmer-badge">
               <span className="verified-dot"></span>
-              Verified Farmer
+              {isVerified ? 'Verified Farmer' : 'Farmer Account'}
             </div>
           </div>
         </div>
@@ -95,12 +107,12 @@ export default function DashboardLayout({ children }) {
           </div>
 
           <div className="topbar-right">
-            <div className="topbar-date">May 24, 2024 — May 30, 2024</div>
-            <button className="topbar-icon-btn">
-              <Bell size={20} />
-            </button>
             <div className="topbar-user">
-              <div className="topbar-avatar">GV</div>
+              <div className="topbar-avatar">{initials}</div>
+              <div className="topbar-user-info">
+                <div className="topbar-user-name">{displayName}</div>
+                <div className="topbar-user-role">Farmer</div>
+              </div>
               <ChevronDown size={16} />
             </div>
           </div>

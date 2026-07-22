@@ -449,16 +449,172 @@ function FarmerDetailModal({ farmer, open, onClose, onAction }) {
 }
 
 /* ─────────────────────────────────────────────
+   Add Farmer Modal
+───────────────────────────────────────────── */
+
+function AddFarmerModal({ open, onClose, onAdd }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [farmName, setFarmName] = useState('');
+  const [farmLocation, setFarmLocation] = useState('');
+  const [farmSize, setFarmSize] = useState('');
+  const [primaryCategory, setPrimaryCategory] = useState('vegetables');
+  const [idType, setIdType] = useState('national');
+  const [idNumber, setIdNumber] = useState('');
+  const [farmBio, setFarmBio] = useState('');
+
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  if (!open) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await onAdd({
+        email,
+        password,
+        fullName,
+        phone,
+        farmName,
+        farmLocation,
+        farmSize,
+        primaryCategory,
+        idType,
+        idNumber,
+        farmBio,
+      });
+
+      setEmail('');
+      setPassword('');
+      setFullName('');
+      setPhone('');
+      setFarmName('');
+      setFarmLocation('');
+      setFarmSize('');
+      setFarmBio('');
+      setIdNumber('');
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Failed to create farmer account.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <div style={{ padding: '2.5rem', maxWidth: '640px', width: '100%', margin: '0 auto' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.25rem', color: '#111' }}>
+          ➕ Add New Farmer Account
+        </h3>
+        {error && (
+          <div style={{ color: '#c62828', background: '#ffebee', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}>
+            {error}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Full Name *</label>
+              <input type="text" className="fm-input" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Kwame Mensah" />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Phone *</label>
+              <input type="tel" className="fm-input" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. +233 24..." />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Email Address *</label>
+              <input type="email" className="fm-input" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="farmer@farm.com" />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Password *</label>
+              <input type="password" className="fm-input" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+            </div>
+          </div>
+
+          <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '0.5rem 0' }} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Farm Name *</label>
+              <input type="text" className="fm-input" required value={farmName} onChange={(e) => setFarmName(e.target.value)} placeholder="e.g. Mensah Valley Farms" />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Location *</label>
+              <input type="text" className="fm-input" required value={farmLocation} onChange={(e) => setFarmLocation(e.target.value)} placeholder="e.g. Kumasi, Ashanti" />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Farm Size (Acres) *</label>
+              <input type="number" className="fm-input" min="1" required value={farmSize} onChange={(e) => setFarmSize(e.target.value)} placeholder="5" />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Primary Category *</label>
+              <select className="fm-input" style={{ padding: '0.65rem' }} value={primaryCategory} onChange={(e) => setPrimaryCategory(e.target.value)}>
+                <option value="vegetables">Vegetables</option>
+                <option value="fruits">Fruits</option>
+                <option value="grains">Grains</option>
+                <option value="spices">Spices</option>
+                <option value="tubers">Tubers</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>ID Card Type *</label>
+              <select className="fm-input" style={{ padding: '0.65rem' }} value={idType} onChange={(e) => setIdType(e.target.value)}>
+                <option value="national">National ID (Ghana Card)</option>
+                <option value="voter">Voter's ID</option>
+                <option value="association">Farmer Association ID</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>ID Number *</label>
+              <input type="text" className="fm-input" required value={idNumber} onChange={(e) => setIdNumber(e.target.value)} placeholder="e.g. GHA-123456789-0" />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555', display: 'block', marginBottom: '0.3rem' }}>About the Farm</label>
+            <textarea className="fm-textarea" rows="2" value={farmBio} onChange={(e) => setFarmBio(e.target.value)} placeholder="Short description of the farm..." />
+          </div>
+
+          <div className="fm-modal-actions" style={{ justifyContent: 'flex-end', marginTop: '1rem' }}>
+            <button type="button" className="fm-btn fm-btn-cancel" onClick={onClose}>Cancel</button>
+            <button type="submit" className="fm-btn fm-btn-approve" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create Account'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+/* ─────────────────────────────────────────────
    Main Page Component
 ───────────────────────────────────────────── */
 
 export default function AdminFarmerManagementPage() {
-  const [farmers, setFarmers] = useState(MOCK_FARMERS);
+  const [farmers, setFarmers] = useState([]);
   const [search, setSearch] = useState('');
   const [filterTab, setFilterTab] = useState('all');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [toast, setToast] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const perPage = 10;
 
   // Modal states
@@ -467,6 +623,55 @@ export default function AdminFarmerManagementPage() {
   const [rejectFarmer, setRejectFarmer] = useState(null);
   const [suspendFarmer, setSuspendFarmer] = useState(null);
   const [deleteFarmer, setDeleteFarmer] = useState(null);
+
+  // Fetch Farmers from Supabase
+  const loadFarmers = async () => {
+    setIsLoadingData(true);
+    try {
+      const { data, error } = await supabase
+        .from('farmers')
+        .select('*, profiles(*)');
+
+      if (error) {
+        console.error('Error fetching farmers:', error);
+        return;
+      }
+
+      if (data) {
+        const formatted = data.map((f) => ({
+          id: f.id,
+          name: f.profiles?.full_name || 'Unknown Farmer',
+          email: f.profiles?.email || '',
+          phone: f.profiles?.phone || '',
+          farmName: f.farm_name,
+          location: f.farm_location,
+          farmSize: f.farm_size,
+          primaryCategory: f.primary_category,
+          idType: f.id_type,
+          idNumber: f.id_number,
+          farmDescription: f.farm_bio || '',
+          status: f.verification_status || 'pending',
+          dateJoined: f.created_at,
+          cropsListed: 0,
+          totalOrders: 0,
+          totalRevenue: 0,
+          cropSpecialty: f.primary_category,
+          crops: [],
+          orders: [],
+          blogPosts: [],
+        }));
+        setFarmers(formatted);
+      }
+    } catch (err) {
+      console.error('Error loading farmers:', err);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFarmers();
+  }, []);
 
   // Stats
   const totalFarmers = farmers.length;
@@ -492,7 +697,7 @@ export default function AdminFarmerManagementPage() {
     return list;
   }, [farmers, filterTab, search]);
 
-  const totalPages = Math.ceil(filtered.length / perPage);
+  const totalPages = Math.ceil(filtered.length / perPage) || 1;
   const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   // Handlers
@@ -501,47 +706,204 @@ export default function AdminFarmerManagementPage() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const handleVerify = (id) => {
-    setFarmers((prev) => prev.map((f) => (f.id === id ? { ...f, status: 'verified' } : f)));
+  const handleVerify = async (id) => {
+    const { error } = await supabase
+      .from('farmers')
+      .update({ verification_status: 'verified' })
+      .eq('id', id);
+
+    if (!error) {
+      setFarmers((prev) => prev.map((f) => (f.id === id ? { ...f, status: 'verified' } : f)));
+      showToast('verified');
+    } else {
+      console.error('Error verifying farmer:', error);
+    }
+  };
+
+  const handleReject = async (id) => {
+    const { error } = await supabase
+      .from('farmers')
+      .update({ verification_status: 'rejected' })
+      .eq('id', id);
+
+    if (!error) {
+      setFarmers((prev) => prev.filter((f) => f.id !== id));
+      showToast('rejected');
+    } else {
+      console.error('Error rejecting farmer:', error);
+    }
+  };
+
+  const handleSuspend = async (id) => {
+    const { error } = await supabase
+      .from('farmers')
+      .update({ verification_status: 'suspended' })
+      .eq('id', id);
+
+    if (!error) {
+      setFarmers((prev) => prev.map((f) => (f.id === id ? { ...f, status: 'suspended' } : f)));
+      showToast('suspended');
+    } else {
+      console.error('Error suspending farmer:', error);
+    }
+  };
+
+  const handleReactivate = async (id) => {
+    const { error } = await supabase
+      .from('farmers')
+      .update({ verification_status: 'verified' })
+      .eq('id', id);
+
+    if (!error) {
+      setFarmers((prev) => prev.map((f) => (f.id === id ? { ...f, status: 'verified' } : f)));
+      showToast('reactivated');
+    } else {
+      console.error('Error reactivating farmer:', error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      setFarmers((prev) => prev.filter((f) => f.id !== id));
+      showToast('deleted');
+    } else {
+      console.error('Error deleting farmer profile:', error);
+    }
+  };
+
+  const handleBulkVerify = async () => {
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from('farmers')
+      .update({ verification_status: 'verified' })
+      .in('id', ids);
+
+    if (!error) {
+      setFarmers((prev) => prev.map((f) => (selectedIds.has(f.id) ? { ...f, status: 'verified' } : f)));
+      showToast('bulkVerified');
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleBulkSuspend = async () => {
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from('farmers')
+      .update({ verification_status: 'suspended' })
+      .in('id', ids);
+
+    if (!error) {
+      setFarmers((prev) => prev.map((f) => (selectedIds.has(f.id) ? { ...f, status: 'suspended' } : f)));
+      showToast('bulkSuspended');
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .in('id', ids);
+
+    if (!error) {
+      setFarmers((prev) => prev.filter((f) => !selectedIds.has(f.id)));
+      showToast('bulkDeleted');
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleCreateFarmer = async (formData) => {
+    // Create temporary Supabase client with non-persisting session to not sign out current Admin
+    const tempSupabase = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false } }
+    );
+
+    const normalizedEmail = formData.email.trim().toLowerCase();
+
+    const { data: authData, error: authError } = await tempSupabase.auth.signUp({
+      email: normalizedEmail,
+      password: formData.password,
+      options: {
+        data: {
+          full_name: formData.fullName,
+          phone: formData.phone,
+          role: 'farmer',
+          farm_name: formData.farmName,
+          farm_location: formData.farmLocation,
+          farm_size: parseFloat(formData.farmSize) || 0,
+          primary_category: formData.primaryCategory,
+          id_type: formData.idType,
+          id_number: formData.idNumber,
+          farm_bio: formData.farmBio,
+        },
+      },
+    });
+
+    if (authError) {
+      throw new Error(authError.message);
+    }
+
+    if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
+      throw new Error('An account with this email already exists in Supabase Auth. Please use a different email or delete the existing account first.');
+    }
+
+    const newUserId = authData.user?.id;
+    if (newUserId) {
+      // 1. Ensure profile role is set to 'farmer'
+      const { error: profileErr } = await supabase
+        .from('profiles')
+        .upsert({
+          id: newUserId,
+          email: normalizedEmail,
+          full_name: formData.fullName,
+          phone: formData.phone,
+          role: 'farmer',
+        });
+
+      if (profileErr) {
+        console.error('Error saving profile record:', profileErr);
+      }
+
+      // 2. Remove any fallback buyer row if trigger created it
+      await supabase
+        .from('buyers')
+        .delete()
+        .eq('id', newUserId);
+
+      // 3. Insert or update farmer record as verified
+      const { error: fErr } = await supabase
+        .from('farmers')
+        .upsert({
+          id: newUserId,
+          farm_name: formData.farmName,
+          farm_location: formData.farmLocation,
+          farm_size: parseFloat(formData.farmSize) || 0,
+          primary_category: formData.primaryCategory,
+          id_type: formData.idType,
+          id_number: formData.idNumber,
+          farm_bio: formData.farmBio || '',
+          verification_status: 'verified',
+        });
+
+      if (fErr) {
+        console.error('Error saving farmer record:', fErr);
+        throw new Error(`Failed to save farmer record: ${fErr.message}`);
+      }
+    } else {
+      throw new Error('Supabase Auth failed to return a valid User ID.');
+    }
+
+    // Refresh farmers list
+    await loadFarmers();
     showToast('verified');
-  };
-
-  const handleReject = (id) => {
-    setFarmers((prev) => prev.filter((f) => f.id !== id));
-    showToast('rejected');
-  };
-
-  const handleSuspend = (id) => {
-    setFarmers((prev) => prev.map((f) => (f.id === id ? { ...f, status: 'suspended' } : f)));
-    showToast('suspended');
-  };
-
-  const handleReactivate = (id) => {
-    setFarmers((prev) => prev.map((f) => (f.id === id ? { ...f, status: 'verified' } : f)));
-    showToast('reactivated');
-  };
-
-  const handleDelete = (id) => {
-    setFarmers((prev) => prev.filter((f) => f.id !== id));
-    showToast('deleted');
-  };
-
-  const handleBulkVerify = () => {
-    setFarmers((prev) => prev.map((f) => (selectedIds.has(f.id) ? { ...f, status: 'verified' } : f)));
-    showToast('bulkVerified');
-    setSelectedIds(new Set());
-  };
-
-  const handleBulkSuspend = () => {
-    setFarmers((prev) => prev.map((f) => (selectedIds.has(f.id) ? { ...f, status: 'suspended' } : f)));
-    showToast('bulkSuspended');
-    setSelectedIds(new Set());
-  };
-
-  const handleBulkDelete = () => {
-    setFarmers((prev) => prev.filter((f) => !selectedIds.has(f.id)));
-    showToast('bulkDeleted');
-    setSelectedIds(new Set());
   };
 
   const toggleSelect = (id) => {
@@ -604,6 +966,9 @@ export default function AdminFarmerManagementPage() {
         {/* Page Header */}
         <div className="fm-header">
           <h1 className="fm-page-title">Farmer Management</h1>
+          <button className="fm-btn fm-btn-approve" onClick={() => setIsAddModalOpen(true)}>
+            <Plus size={16} /> Add New Farmer
+          </button>
         </div>
 
         {/* Stats Row */}
@@ -827,6 +1192,11 @@ export default function AdminFarmerManagementPage() {
           open={!!deleteFarmer}
           onClose={() => setDeleteFarmer(null)}
           onConfirm={handleDelete}
+        />
+        <AddFarmerModal
+          open={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAdd={handleCreateFarmer}
         />
       </div>
     </AdminDashboardLayout>

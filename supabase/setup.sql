@@ -39,7 +39,7 @@ create table if not exists public.farmers (
   id uuid references public.profiles(id) on delete cascade primary key,
   farm_name text not null,
   farm_location text not null,
-  farm_size numeric not null,
+  farm_size numeric not null default 0,
   primary_category text not null,
   id_type text not null,
   id_number text not null,
@@ -110,13 +110,22 @@ create policy "Admins have full access to buyers." on public.buyers
 
 -- 4. AUTH TRIGGER
 -- Automatically creates profile, farmer, or buyer details in a secure transaction during signup.
--- This bypasses client-side RLS limits for unconfirmed/new signups.
 create or replace function public.handle_new_user()
 returns trigger as $$
 declare
   user_role text;
+  parsed_farm_size numeric := 0;
 begin
-  user_role := coalesce(new.raw_user_meta_data->>'role', 'buyer');
+  user_role := lower(coalesce(new.raw_user_meta_data->>'role', 'buyer'));
+
+  -- Safe numeric conversion for farm_size
+  begin
+    if new.raw_user_meta_data->>'farm_size' is not null and new.raw_user_meta_data->>'farm_size' != '' then
+      parsed_farm_size := (new.raw_user_meta_data->>'farm_size')::numeric;
+    end if;
+  exception when others then
+    parsed_farm_size := 0;
+  end;
 
   -- Insert into profiles
   insert into public.profiles (id, email, full_name, phone, role)
@@ -126,7 +135,11 @@ begin
     coalesce(new.raw_user_meta_data->>'full_name', ''),
     new.raw_user_meta_data->>'phone',
     user_role
-  );
+  )
+  on conflict (id) do update set
+    full_name = excluded.full_name,
+    phone = excluded.phone,
+    role = excluded.role;
 
   -- Insert into role-specific tables
   if user_role = 'farmer' then
@@ -145,13 +158,15 @@ begin
       new.id,
       coalesce(new.raw_user_meta_data->>'farm_name', 'Unnamed Farm'),
       coalesce(new.raw_user_meta_data->>'farm_location', 'Unknown'),
-      coalesce((new.raw_user_meta_data->>'farm_size')::numeric, 0),
+      parsed_farm_size,
       coalesce(new.raw_user_meta_data->>'primary_category', 'vegetables'),
       coalesce(new.raw_user_meta_data->>'id_type', 'national'),
       coalesce(new.raw_user_meta_data->>'id_number', ''),
       coalesce(new.raw_user_meta_data->>'farm_bio', ''),
       'pending'
-    );
+    )
+    on conflict (id) do nothing;
+
   elsif user_role = 'buyer' then
     insert into public.buyers (
       id, 
@@ -166,7 +181,8 @@ begin
       coalesce(new.raw_user_meta_data->>'payment_method', 'momo'),
       coalesce(new.raw_user_meta_data->>'delivery_address', ''),
       'active'
-    );
+    )
+    on conflict (id) do nothing;
   end if;
 
   return new;

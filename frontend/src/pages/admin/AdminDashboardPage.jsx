@@ -11,9 +11,8 @@ import {
   CheckCircle,
   LogOut,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './admin.css';
-
-
 
 function AdminSidebarNavItem({ to, icon: Icon, label }) {
   const location = useLocation();
@@ -27,18 +26,40 @@ function AdminSidebarNavItem({ to, icon: Icon, label }) {
   );
 }
 
+function getInitials(name) {
+  if (!name) return 'A';
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
 function AdminDashboardLayout({ children }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
+
+  const initials = getInitials(user?.name);
+  const displayName = user?.name || 'Admin';
+  const pageTitle = pathname.replace('/admin/', '').replace(/-/g, ' ') || 'dashboard';
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/admin/login', { replace: true });
+  };
 
   return (
     <div className="admin-app-root">
       <aside className="admin-sidebar">
+        {/* Brand */}
         <div className="admin-sidebar-brand">
           <div className="admin-sidebar-emoji">🌱</div>
+          <div className="admin-sidebar-title">AgriLink Admin</div>
+        </div>
+
+        {/* Admin Profile */}
+        <div className="admin-sidebar-profile">
+          <div className="admin-sidebar-avatar">{initials}</div>
           <div>
-            <div className="admin-sidebar-title">AgriLink Admin</div>
-            <div className="admin-sidebar-divider" />
+            <div className="admin-sidebar-profile-name">{displayName}</div>
+            <div className="admin-sidebar-profile-role">Administrator</div>
           </div>
         </div>
 
@@ -53,13 +74,7 @@ function AdminDashboardLayout({ children }) {
           <AdminSidebarNavItem to="/admin/settings" icon={Settings} label="Settings" />
         </nav>
 
-        <button
-          className="admin-sidebar-logout"
-          onClick={() => {
-            localStorage.removeItem('agrilink_user');
-            navigate('/');
-          }}
-        >
+        <button className="admin-sidebar-logout" onClick={handleLogout}>
           <LogOut size={18} />
           <span>Logout</span>
         </button>
@@ -68,18 +83,16 @@ function AdminDashboardLayout({ children }) {
       <div className="admin-main">
         <header className="admin-topbar">
           <div className="admin-topbar-left">
-            <div className="admin-topbar-breadcrumb">{pathname.replace('/admin/', '').replace(/-/g, ' ') || 'dashboard'}</div>
+            <div className="admin-topbar-breadcrumb" style={{ textTransform: 'capitalize' }}>{pageTitle}</div>
           </div>
           <div className="admin-topbar-right">
             <div className="admin-topbar-user">
-              <span className="admin-topbar-user-name">Admin</span>
-              <button
-                className="admin-topbar-logout"
-                onClick={() => {
-                  localStorage.removeItem('agrilink_user');
-                  navigate('/admin/login');
-                }}
-              >
+              <div className="admin-topbar-avatar">{initials}</div>
+              <div className="admin-topbar-user-info">
+                <div className="admin-topbar-user-name">{displayName}</div>
+                <div className="admin-topbar-user-role">Administrator</div>
+              </div>
+              <button className="admin-topbar-logout" onClick={handleLogout}>
                 <LogOut size={16} />
                 <span>Logout</span>
               </button>

@@ -137,102 +137,155 @@
 
 
 /* ============================================================
-   ADMIN SHELL – SIDEBAR + TOPBAR
+   ADMIN SHELL – SIDEBAR + TOPBAR  (farmer-style design)
    ============================================================ */
 .admin-app-root {
   display: flex;
   min-height: 100vh;
-  background: #f0f4f2;
+  background: #f4f6f5;
   font-family: 'Inter', sans-serif;
 }
 
-/* Sidebar */
+/* ── Sidebar ── */
 .admin-sidebar {
   width: 260px;
-  background: linear-gradient(180deg, #0a2419 0%, #0f3d2a 100%);
-  color: #fff;
+  background: #ffffff;
+  border-right: 1px solid #e8ede9;
   position: fixed;
   top: 0; left: 0;
   height: 100vh;
-  padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  z-index: 100;
-  box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+  z-index: 500;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+  transition: transform 0.25s ease;
 }
 
+/* Brand / Logo area */
 .admin-sidebar-brand {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0.5rem 1.25rem;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  margin-bottom: 0.5rem;
+  padding: 1.5rem 1.25rem;
+  border-bottom: 1px solid #e8ede9;
 }
 
 .admin-sidebar-emoji {
   width: 40px; height: 40px;
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.12);
+  background: linear-gradient(135deg, #1e5c3b, #2d7a52);
   font-size: 1.25rem;
   flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(30,92,59,0.3);
 }
 
-.admin-sidebar-title { font-weight: 800; font-size: 1rem; color: #fff; line-height: 1.2; }
+.admin-sidebar-title {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #1e5c3b;
+  line-height: 1.2;
+}
 .admin-sidebar-divider { display: none; }
 
+/* Admin profile pill */
+.admin-sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e8ede9;
+  background: #f8fbf9;
+}
+.admin-sidebar-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e5c3b, #2d7a52);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.admin-sidebar-profile-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.3;
+}
+.admin-sidebar-profile-role {
+  font-size: 0.73rem;
+  color: #1e5c3b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.1rem;
+}
+.admin-sidebar-profile-role::before {
+  content: '';
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #2d7a52;
+}
+
+/* Nav */
 .admin-sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  padding: 1rem 0.75rem;
+  gap: 0.25rem;
   flex: 1;
+  overflow-y: auto;
 }
 
 .admin-sidebar-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.7rem 0.9rem;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
   border-radius: 10px;
-  color: rgba(255,255,255,0.65);
+  color: #6b7280;
   text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
   transition: all 0.18s ease;
 }
 .admin-sidebar-item:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
+  background: #edf7f2;
+  color: #1e5c3b;
 }
 .admin-sidebar-item.active {
-  background: linear-gradient(135deg, #2d7a52, #1e5c3b);
+  background: #1e5c3b;
   color: #fff;
-  box-shadow: 0 4px 12px rgba(30,92,59,0.4);
+  font-weight: 600;
 }
-.admin-sidebar-icon { flex-shrink: 0; }
+.admin-sidebar-item.active .admin-sidebar-icon {
+  color: #fff;
+}
+.admin-sidebar-icon { flex-shrink: 0; color: #9ca3af; }
 .admin-sidebar-label { flex: 1; }
 
+/* Logout button */
 .admin-sidebar-logout {
-  margin-top: auto;
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.7rem 0.9rem;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.7);
-  cursor: pointer;
+  gap: 0.75rem;
+  padding: 1rem 1.75rem;
+  border-top: 1px solid #e8ede9;
+  color: #e53935;
+  font-size: 0.9rem;
   font-weight: 600;
-  font-size: 0.875rem;
-  border: none;
+  cursor: pointer;
+  transition: background 0.18s;
+  border-left: none; border-right: none; border-bottom: none;
+  background: none;
   width: 100%;
-  transition: all 0.18s;
 }
-.admin-sidebar-logout:hover { background: rgba(255,0,0,0.15); color: #ff8a80; }
+.admin-sidebar-logout:hover { background: #fef2f2; }
 
-/* Main area */
+/* ── Main area ── */
 .admin-main {
   margin-left: 260px;
   width: calc(100% - 260px);
@@ -241,10 +294,10 @@
   min-height: 100vh;
 }
 
-/* Topbar */
+/* ── Topbar ── */
 .admin-topbar {
   height: 64px;
-  background: #fff;
+  background: #ffffff;
   border-bottom: 1px solid #e8ede9;
   display: flex;
   align-items: center;
@@ -253,15 +306,14 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
 }
 .admin-topbar-left {}
 .admin-topbar-breadcrumb {
-  font-size: 0.82rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  color: #aaa;
+  color: #111;
   text-transform: capitalize;
-  letter-spacing: 0.04em;
 }
 .admin-topbar-right {}
 .admin-topbar-user {
@@ -269,13 +321,25 @@
   align-items: center;
   gap: 0.75rem;
 }
-.admin-topbar-user-name { font-weight: 700; color: #222; font-size: 0.9rem; }
+.admin-topbar-avatar {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e5c3b, #2d7a52);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.admin-topbar-user-info {}
+.admin-topbar-user-name { font-weight: 700; color: #111; font-size: 0.88rem; line-height: 1.2; }
+.admin-topbar-user-role { font-size: 0.72rem; color: #1e5c3b; font-weight: 600; }
 .admin-topbar-logout {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   cursor: pointer;
-  color: #c62828;
+  color: #e53935;
   font-weight: 700;
   font-size: 0.85rem;
   background: #fff5f5;

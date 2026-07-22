@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Leaf, ShoppingBasket, LogOut } from 'lucide-react';
+import { Menu, X, Leaf, ShoppingBasket, LogOut, User, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef = useRef(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -17,10 +19,21 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  useEffect(() => {
+    const handleDocumentClick = (event) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(event.target)) {
+        setAvatarMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleDocumentClick);
+    return () => document.removeEventListener('mousedown', handleDocumentClick);
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
     setIsOpen(false);
+    setAvatarMenuOpen(false);
+    navigate('/', { replace: true });
   };
 
   return (
@@ -39,6 +52,11 @@ export default function Navbar() {
               Marketplace
             </Link>
           )}
+          {user?.role === 'admin' && (
+            <Link to="/admin/dashboard" className="nav-link">
+              Admin Portal
+            </Link>
+          )}
           <Link to="/contact" className="nav-link">Contact</Link>
           <a href="#features" className="nav-link">Features</a>
           <a href="#how-it-works" className="nav-link">How it works</a>
@@ -46,35 +64,73 @@ export default function Navbar() {
 
         <div className="nav-actions">
           {user ? (
-            <>
-              <div
-                className="user-info"
-                style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '15px' }}
-              >
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                  <div style={{ fontWeight: '600' }}>{user.name}</div>
-                  <div style={{ fontSize: '0.8rem' }}>{user.role === 'farmer' ? 'Farmer' : 'Buyer'}</div>
-                </div>
-              </div>
-
-              {user.role === 'farmer' ? (
-                <Link to="/dashboard" className="btn btn-primary">Dashboard</Link>
-              ) : (
-                <Link to="/marketplace" className="btn btn-primary">
-                  <ShoppingBasket size={16} />
-                  Marketplace
-                </Link>
-              )}
-
+            <div className="navbar-user-menu-wrapper" ref={avatarMenuRef}>
               <button
-                onClick={handleLogout}
-                className="btn-logout"
-                title="Logout"
-                style={{ background: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '8px' }}
+                type="button"
+                className="navbar-avatar-btn"
+                onClick={() => setAvatarMenuOpen(open => !open)}
+                aria-expanded={avatarMenuOpen}
+                aria-haspopup="menu"
               >
-                <LogOut size={20} />
+                <span className="navbar-avatar-initials">
+                  {user.name ? user.name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase() : 'NK'}
+                </span>
+                <ChevronDown size={14} className={`navbar-chevron ${avatarMenuOpen ? 'navbar-chevron-open' : ''}`} />
               </button>
-            </>
+
+              {avatarMenuOpen && (
+                <div className="navbar-dropdown-overlay" onClick={() => setAvatarMenuOpen(false)} />
+              )}
+              {avatarMenuOpen && (
+                <div className="navbar-avatar-dropdown" role="menu">
+                  <div className="navbar-dropdown-header">
+                    <div className="navbar-dropdown-name">{user.name}</div>
+                    <div className="navbar-dropdown-email">{user.email}</div>
+                    <div className="navbar-dropdown-role">
+                      {user.role === 'farmer' ? 'Farmer' : user.role === 'admin' ? 'Administrator' : 'Buyer'}
+                    </div>
+                  </div>
+                  <div className="navbar-dropdown-divider" />
+                  {user.role === 'farmer' ? (
+                    <Link
+                      to="/dashboard"
+                      className="navbar-dropdown-item"
+                      onClick={() => setAvatarMenuOpen(false)}
+                    >
+                      <ShoppingBasket size={18} className="navbar-dropdown-item-icon" />
+                      <span>Farmer Dashboard</span>
+                    </Link>
+                  ) : user.role === 'admin' ? (
+                    <Link
+                      to="/admin/dashboard"
+                      className="navbar-dropdown-item"
+                      onClick={() => setAvatarMenuOpen(false)}
+                    >
+                      <ShoppingBasket size={18} className="navbar-dropdown-item-icon" />
+                      <span>Admin Portal</span>
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/marketplace"
+                      className="navbar-dropdown-item"
+                      onClick={() => setAvatarMenuOpen(false)}
+                    >
+                      <ShoppingBasket size={18} className="navbar-dropdown-item-icon" />
+                      <span>Marketplace</span>
+                    </Link>
+                  )}
+                  <div className="navbar-dropdown-divider" />
+                  <button
+                    type="button"
+                    className="navbar-dropdown-item navbar-dropdown-logout"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={18} className="navbar-dropdown-item-icon navbar-dropdown-item-icon-logout" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <>
               <Link to="/login" className="btn-login">Login</Link>
@@ -106,13 +162,17 @@ export default function Navbar() {
                 <div style={{ padding: '10px', borderBottom: '1px solid var(--border)', marginBottom: '10px' }}>
                   <p style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '4px' }}>{user.name}</p>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {user.role === 'farmer' ? 'Farmer' : 'Buyer'}
+                    {user.role === 'farmer' ? 'Farmer' : user.role === 'admin' ? 'Administrator' : 'Buyer'}
                   </p>
                 </div>
 
                 {user.role === 'farmer' ? (
                   <Link to="/dashboard" onClick={() => setIsOpen(false)} className="btn btn-primary w-full">
-                    Dashboard
+                    Farmer Dashboard
+                  </Link>
+                ) : user.role === 'admin' ? (
+                  <Link to="/admin/dashboard" onClick={() => setIsOpen(false)} className="btn btn-primary w-full">
+                    Admin Portal
                   </Link>
                 ) : (
                   <Link to="/marketplace" onClick={() => setIsOpen(false)} className="btn btn-primary w-full">
