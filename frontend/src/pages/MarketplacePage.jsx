@@ -6,6 +6,7 @@ import {
   Plus, Minus, Eye, User, Package, MessageCircle, LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../supabaseClient';
 
 // ─── Mock Product Data ─────────────────────────────────────────────────────
 const allProducts = [
@@ -207,7 +208,68 @@ export default function MarketplacePage() {
   const [cart, setCart] = useState({}); // { productId: qty }
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [crops, setCrops] = useState([]);
+  const [loading, setLoading] = useState(true);
   const avatarMenuRef = useRef(null);
+
+  // Fetch crops from Supabase on component mount
+  useEffect(() => {
+    const fetchCrops = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch crops with farmer data using RLS
+        const { data, error } = await supabase
+          .from('crops')
+          .select(`
+            id,
+            name,
+            category,
+            description,
+            price,
+            unit,
+            quantity,
+            location,
+            image_url,
+            status,
+            profiles:farmer_id(name)
+          `)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching crops:', error);
+          setCrops(allProducts); // Fallback to demo data
+        } else if (data && data.length > 0) {
+          // Transform Supabase crops to match component structure
+          const transformedCrops = data.map(crop => ({
+            id: crop.id,
+            name: crop.name,
+            farm: crop.profiles?.name || 'Unknown Farm',
+            location: crop.location || 'Unknown',
+            price: crop.price,
+            unit: crop.unit,
+            category: crop.category.toLowerCase(),
+            rating: 4.5, // Default rating since it's not in the crops table
+            reviews: 0,
+            image: crop.image_url,
+            inStock: crop.quantity > 0,
+            badge: crop.quantity > 0 ? '' : 'Out of Stock',
+          }));
+          setCrops(transformedCrops);
+        } else {
+          setCrops(allProducts); // Fallback to demo data if no crops
+        }
+      } catch (err) {
+        console.error('Error fetching crops:', err);
+        setCrops(allProducts); // Fallback to demo data on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCrops();
+  }, []);
 
   // Total cart items count
   const totalCartItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
@@ -245,7 +307,7 @@ export default function MarketplacePage() {
   };
 
   const filtered = useMemo(() => {
-    let list = [...allProducts];
+    let list = [...crops];
     if (search) list = list.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.farm.toLowerCase().includes(search.toLowerCase()));
     if (selectedCategory !== 'all') list = list.filter(p => p.category === selectedCategory);
     list = list.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
@@ -257,7 +319,7 @@ export default function MarketplacePage() {
       default: break;
     }
     return list;
-  }, [search, selectedCategory, priceRange, location, sortBy]);
+  }, [search, selectedCategory, priceRange, location, sortBy, crops]);
 
   const FilterSidebar = () => (
     <aside className="mp-sidebar">
