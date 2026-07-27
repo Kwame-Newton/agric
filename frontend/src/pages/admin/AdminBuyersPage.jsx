@@ -1,158 +1,19 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Search, X, Eye, Trash2, Download, ChevronLeft, ChevronRight,
   Mail, Phone, MapPin, Calendar, ShoppingCart, Package,
-  Star, TrendingUp, DollarSign, Clock, UserX, UserCheck,
-  AlertTriangle, RotateCcw, Filter, Users,
+  TrendingUp, DollarSign, Clock, UserX, UserCheck,
+  RotateCcw, Users, Loader, RefreshCw
 } from 'lucide-react';
+import { supabase } from '../../supabaseClient';
 import { AdminDashboardLayout } from './AdminDashboardPage';
 import './admin.css';
-
-/* ──────────────────────────────────────────────────────────
-   Mock Buyers Data
-────────────────────────────────────────────────────────── */
-const MOCK_BUYERS = [
-  {
-    id: 1,
-    name: 'Mary Mensah',
-    email: 'mary.mensah@gmail.com',
-    phone: '+233 24 111 2233',
-    location: 'Accra, Greater Accra',
-    dateJoined: '2024-01-10',
-    status: 'active',
-    totalOrders: 24,
-    totalSpent: 3840,
-    lastOrder: '2024-04-10',
-    preferredCategories: ['Vegetables', 'Grains'],
-    recentOrders: [
-      { id: 'ORD-001', crop: 'Organic Tomatoes', farmer: 'Kwame Asare', amount: 150, status: 'delivered', date: '2024-04-10' },
-      { id: 'ORD-002', crop: 'Sweet Maize', farmer: 'Kwame Asare', amount: 80, status: 'processing', date: '2024-04-08' },
-      { id: 'ORD-003', crop: 'Cabbage', farmer: 'Efua Sackey', amount: 60, status: 'delivered', date: '2024-03-29' },
-    ],
-  },
-  {
-    id: 2,
-    name: 'John Doe',
-    email: 'john.doe@company.com',
-    phone: '+233 20 333 4455',
-    location: 'Kumasi, Ashanti',
-    dateJoined: '2024-02-05',
-    status: 'active',
-    totalOrders: 18,
-    totalSpent: 5230,
-    lastOrder: '2024-04-12',
-    preferredCategories: ['Tubers', 'Cash Crops'],
-    recentOrders: [
-      { id: 'ORD-010', crop: 'White Yam', farmer: 'Nana Addo', amount: 200, status: 'pending', date: '2024-04-12' },
-      { id: 'ORD-011', crop: 'Cocoa Beans', farmer: 'Kofi Mensah', amount: 450, status: 'delivered', date: '2024-04-01' },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Ama Serwaa',
-    email: 'ama.serwaa@yahoo.com',
-    phone: '+233 50 777 8899',
-    location: 'Cape Coast, Central',
-    dateJoined: '2023-11-20',
-    status: 'active',
-    totalOrders: 41,
-    totalSpent: 7650,
-    lastOrder: '2024-04-09',
-    preferredCategories: ['Vegetables', 'Herbs', 'Poultry'],
-    recentOrders: [
-      { id: 'ORD-020', crop: 'Fresh Spinach', farmer: 'Ama Owusu', amount: 50, status: 'delivered', date: '2024-04-09' },
-      { id: 'ORD-021', crop: 'Coriander', farmer: 'Ama Owusu', amount: 30, status: 'delivered', date: '2024-04-02' },
-    ],
-  },
-  {
-    id: 4,
-    name: 'Kofi Annan',
-    email: 'kofi.annan@biz.gh',
-    phone: '+233 27 555 6677',
-    location: 'Takoradi, Western',
-    dateJoined: '2024-03-01',
-    status: 'suspended',
-    totalOrders: 6,
-    totalSpent: 890,
-    lastOrder: '2024-03-20',
-    preferredCategories: ['Grains'],
-    recentOrders: [
-      { id: 'ORD-030', crop: 'Yellow Maize', farmer: 'Nana Addo', amount: 120, status: 'cancelled', date: '2024-03-20' },
-    ],
-  },
-  {
-    id: 5,
-    name: 'Adwoa Boateng',
-    email: 'adwoa.b@restaurant.com',
-    phone: '+233 24 222 0011',
-    location: 'Accra, Greater Accra',
-    dateJoined: '2023-09-14',
-    status: 'active',
-    totalOrders: 67,
-    totalSpent: 18240,
-    lastOrder: '2024-04-13',
-    preferredCategories: ['Vegetables', 'Herbs', 'Poultry', 'Grains'],
-    recentOrders: [
-      { id: 'ORD-040', crop: 'Broccoli', farmer: 'Abena Serwaah', amount: 280, status: 'processing', date: '2024-04-13' },
-      { id: 'ORD-041', crop: 'Zucchini', farmer: 'Abena Serwaah', amount: 220, status: 'delivered', date: '2024-04-07' },
-    ],
-  },
-  {
-    id: 6,
-    name: 'Kweku Asante',
-    email: 'kweku.asante@gmail.com',
-    phone: '+233 55 001 2234',
-    location: 'Sunyani, Bono',
-    dateJoined: '2024-04-01',
-    status: 'inactive',
-    totalOrders: 1,
-    totalSpent: 45,
-    lastOrder: '2024-04-02',
-    preferredCategories: ['Tubers'],
-    recentOrders: [
-      { id: 'ORD-050', crop: 'Cassava', farmer: 'Kwame Asare', amount: 45, status: 'delivered', date: '2024-04-02' },
-    ],
-  },
-  {
-    id: 7,
-    name: 'School Canteen A',
-    email: 'canteen@schoolgh.edu',
-    phone: '+233 30 123 9900',
-    location: 'Accra, Greater Accra',
-    dateJoined: '2023-07-15',
-    status: 'active',
-    totalOrders: 112,
-    totalSpent: 34500,
-    lastOrder: '2024-04-14',
-    preferredCategories: ['Poultry', 'Vegetables', 'Grains'],
-    recentOrders: [
-      { id: 'ORD-060', crop: 'Fresh Eggs', farmer: 'Efua Sackey', amount: 750, status: 'processing', date: '2024-04-14' },
-      { id: 'ORD-061', crop: 'Cabbage', farmer: 'Efua Sackey', amount: 320, status: 'delivered', date: '2024-04-10' },
-    ],
-  },
-  {
-    id: 8,
-    name: 'Local Market Union',
-    email: 'union@kumasi-market.gh',
-    phone: '+233 32 456 7788',
-    location: 'Kumasi, Ashanti',
-    dateJoined: '2023-05-10',
-    status: 'active',
-    totalOrders: 204,
-    totalSpent: 87300,
-    lastOrder: '2024-04-15',
-    preferredCategories: ['Grains', 'Tubers', 'Cash Crops'],
-    recentOrders: [
-      { id: 'ORD-070', crop: 'Yellow Maize', farmer: 'Nana Addo', amount: 3600, status: 'processing', date: '2024-04-15' },
-      { id: 'ORD-071', crop: 'Plantain', farmer: 'Kofi Mensah', amount: 1200, status: 'delivered', date: '2024-04-11' },
-    ],
-  },
-];
 
 /* ──────────────────────────────────────────────────────────
    Helpers
 ────────────────────────────────────────────────────────── */
 function getInitials(name) {
+  if (!name) return 'B';
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
@@ -160,7 +21,11 @@ const AVATAR_COLORS = [
   '#1e5c3b', '#1565c0', '#6a1b9a', '#c62828',
   '#e65100', '#00695c', '#4527a0', '#283593',
 ];
-function avatarColor(id) { return AVATAR_COLORS[id % AVATAR_COLORS.length]; }
+function avatarColor(id) {
+  if (!id) return AVATAR_COLORS[0];
+  const num = typeof id === 'number' ? id : String(id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return AVATAR_COLORS[num % AVATAR_COLORS.length];
+}
 
 /* ──────────────────────────────────────────────────────────
    Sub-components
@@ -225,6 +90,9 @@ function BuyerDetailModal({ buyer, open, onClose, onSuspend, onReactivate, onDel
   const [tab, setTab] = useState('overview');
   if (!buyer || !open) return null;
 
+  const preferredCategories = buyer.preferredCategories || [];
+  const recentOrders = buyer.recentOrders || [];
+
   return (
     <div className="fm-modal-overlay" onClick={onClose}>
       <div className="fm-modal fm-modal-detail" onClick={e => e.stopPropagation()} style={{ maxWidth: 820 }}>
@@ -242,14 +110,16 @@ function BuyerDetailModal({ buyer, open, onClose, onSuspend, onReactivate, onDel
               <div className="fm-detail-info-item"><Mail size={13} className="fm-detail-info-icon" /><span>{buyer.email}</span></div>
               <div className="fm-detail-info-item"><Phone size={13} className="fm-detail-info-icon" /><span>{buyer.phone}</span></div>
               <div className="fm-detail-info-item"><MapPin size={13} className="fm-detail-info-icon" /><span>{buyer.location}</span></div>
-              <div className="fm-detail-info-item"><Calendar size={13} className="fm-detail-info-icon" /><span>Joined {new Date(buyer.dateJoined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span></div>
+              <div className="fm-detail-info-item"><Calendar size={13} className="fm-detail-info-icon" /><span>Joined {buyer.dateJoined ? new Date(buyer.dateJoined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}</span></div>
             </div>
-            <div className="bm-detail-cats">
-              <div className="bm-cats-label">Preferred Categories</div>
-              {buyer.preferredCategories.map(c => (
-                <span key={c} className="bm-cat-chip">{c}</span>
-              ))}
-            </div>
+            {preferredCategories.length > 0 && (
+              <div className="bm-detail-cats">
+                <div className="bm-cats-label">Preferred Categories</div>
+                {preferredCategories.map(c => (
+                  <span key={c} className="bm-cat-chip">{c}</span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Right panel */}
@@ -273,31 +143,35 @@ function BuyerDetailModal({ buyer, open, onClose, onSuspend, onReactivate, onDel
               {tab === 'overview' && (
                 <div className="bm-overview">
                   <div className="bm-kpi-grid">
-                    <div className="bm-kpi"><Package size={18} color="#1565c0" /><span className="bm-kpi-val">{buyer.totalOrders}</span><span className="bm-kpi-lbl">Total Orders</span></div>
-                    <div className="bm-kpi"><DollarSign size={18} color="#2e7d32" /><span className="bm-kpi-val">₵{buyer.totalSpent.toLocaleString()}</span><span className="bm-kpi-lbl">Total Spent</span></div>
-                    <div className="bm-kpi"><Clock size={18} color="#f57f17" /><span className="bm-kpi-val">{new Date(buyer.lastOrder).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span><span className="bm-kpi-lbl">Last Order</span></div>
+                    <div className="bm-kpi"><Package size={18} color="#1565c0" /><span className="bm-kpi-val">{buyer.totalOrders || 0}</span><span className="bm-kpi-lbl">Total Orders</span></div>
+                    <div className="bm-kpi"><DollarSign size={18} color="#2e7d32" /><span className="bm-kpi-val">₵{(buyer.totalSpent || 0).toLocaleString()}</span><span className="bm-kpi-lbl">Total Spent</span></div>
+                    <div className="bm-kpi"><Clock size={18} color="#f57f17" /><span className="bm-kpi-val">{buyer.lastOrder ? new Date(buyer.lastOrder).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No orders'}</span><span className="bm-kpi-lbl">Last Order</span></div>
                   </div>
                 </div>
               )}
 
               {tab === 'orders' && (
                 <div className="fm-detail-orders">
-                  <table className="fm-mini-table">
-                    <thead>
-                      <tr><th>Order ID</th><th>Crop</th><th>Farmer</th><th>Amount</th><th>Status</th></tr>
-                    </thead>
-                    <tbody>
-                      {buyer.recentOrders.map(o => (
-                        <tr key={o.id}>
-                          <td><code style={{ fontSize: '0.75rem', color: '#555' }}>{o.id}</code></td>
-                          <td>{o.crop}</td>
-                          <td style={{ color: '#888', fontSize: '0.82rem' }}>{o.farmer}</td>
-                          <td style={{ fontWeight: 700 }}>₵{o.amount}</td>
-                          <td><OrderStatusBadge status={o.status} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  {recentOrders.length > 0 ? (
+                    <table className="fm-mini-table">
+                      <thead>
+                        <tr><th>Order ID</th><th>Crop</th><th>Farmer</th><th>Amount</th><th>Status</th></tr>
+                      </thead>
+                      <tbody>
+                        {recentOrders.map(o => (
+                          <tr key={o.id}>
+                            <td><code style={{ fontSize: '0.75rem', color: '#555' }}>{o.id}</code></td>
+                            <td>{o.crop}</td>
+                            <td style={{ color: '#888', fontSize: '0.82rem' }}>{o.farmer}</td>
+                            <td style={{ fontWeight: 700 }}>₵{o.amount}</td>
+                            <td><OrderStatusBadge status={o.status} /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p style={{ color: '#888', padding: '1rem 0' }}>No recent orders for this buyer.</p>
+                  )}
                 </div>
               )}
             </div>
@@ -313,7 +187,7 @@ function BuyerDetailModal({ buyer, open, onClose, onSuspend, onReactivate, onDel
                   <RotateCcw size={14} /> Reactivate
                 </button>
               )}
-              <button className="fm-btn fm-btn-delete" onClick={() => { onClose(); onDelete(buyer.id); }}>
+              <button className="fm-btn fm-btn-delete" onClick={() => { onClose(); onDelete(buyer); }}>
                 <Trash2 size={14} /> Delete Account
               </button>
               <button className="fm-btn fm-btn-cancel" onClick={onClose} style={{ marginLeft: 'auto' }}>Close</button>
@@ -338,7 +212,7 @@ function DeleteModal({ buyer, open, onClose, onConfirm }) {
         <div className="fm-modal-delete">
           <div className="fm-modal-delete-icon"><Trash2 size={48} color="#c62828" /></div>
           <h3>Permanently delete this account?</h3>
-          <p className="fm-modal-delete-warning">All orders and account data will be removed. This cannot be undone.</p>
+          <p className="fm-modal-delete-warning">All account data will be removed from the database. This cannot be undone.</p>
           <div className="fm-modal-delete-input-group">
             <label>Type <strong>{buyer.name}</strong> to confirm</label>
             <input
@@ -405,7 +279,9 @@ function ActionsMenu({ buyer, onView, onSuspend, onReactivate, onDelete }) {
    Main Page
 ────────────────────────────────────────────────────────── */
 export default function AdminBuyersPage() {
-  const [buyers, setBuyers] = useState(MOCK_BUYERS);
+  const [buyers, setBuyers] = useState([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -414,11 +290,59 @@ export default function AdminBuyersPage() {
   const [deleteBuyer, setDeleteBuyer] = useState(null);
   const perPage = 8;
 
+  // ── Fetch Buyers from Supabase ────────────────────────────
+  const loadBuyers = useCallback(async () => {
+    setIsLoadingData(true);
+    setError('');
+    try {
+      // Query profiles with role = 'buyer' and join buyers table
+      const { data, error: err } = await supabase
+        .from('profiles')
+        .select('*, buyers(*)')
+        .eq('role', 'buyer')
+        .order('created_at', { ascending: false });
+
+      if (err) throw err;
+
+      if (data) {
+        const formatted = data.map((p) => {
+          const bDetails = Array.isArray(p.buyers) ? p.buyers[0] : p.buyers;
+          return {
+            id: p.id,
+            name: p.full_name || 'Unnamed Buyer',
+            email: p.email || '',
+            phone: p.phone || 'N/A',
+            location: bDetails?.delivery_address || 'Not specified',
+            buyerType: bDetails?.buyer_type || 'individual',
+            paymentMethod: bDetails?.payment_method || 'momo',
+            dateJoined: p.created_at,
+            status: bDetails?.status || 'active',
+            totalOrders: 0,
+            totalSpent: 0,
+            lastOrder: null,
+            preferredCategories: [],
+            recentOrders: [],
+          };
+        });
+        setBuyers(formatted);
+      }
+    } catch (e) {
+      console.error('Error loading buyers:', e);
+      setError('Failed to load buyers. Please check network connection.');
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBuyers();
+  }, [loadBuyers]);
+
   /* Stats */
   const totalBuyers    = buyers.length;
   const activeBuyers   = buyers.filter(b => b.status === 'active').length;
   const suspendedCount = buyers.filter(b => b.status === 'suspended').length;
-  const totalRevenue   = buyers.reduce((s, b) => s + b.totalSpent, 0);
+  const totalRevenue   = buyers.reduce((s, b) => s + (b.totalSpent || 0), 0);
 
   /* Filter */
   const filtered = useMemo(() => {
@@ -429,7 +353,8 @@ export default function AdminBuyersPage() {
       list = list.filter(b =>
         b.name.toLowerCase().includes(q) ||
         b.email.toLowerCase().includes(q) ||
-        b.location.toLowerCase().includes(q)
+        b.location.toLowerCase().includes(q) ||
+        b.buyerType.toLowerCase().includes(q)
       );
     }
     return list;
@@ -440,22 +365,49 @@ export default function AdminBuyersPage() {
 
   const showToast = type => { setToast(type); setTimeout(() => setToast(null), 4000); };
 
-  const handleSuspend = id => {
-    setBuyers(prev => prev.map(b => b.id === id ? { ...b, status: 'suspended' } : b));
-    showToast('suspended');
+  const handleSuspend = async (id) => {
+    try {
+      const { error: err } = await supabase
+        .from('buyers')
+        .upsert({ id, status: 'suspended' });
+      if (err) throw err;
+      setBuyers(prev => prev.map(b => b.id === id ? { ...b, status: 'suspended' } : b));
+      showToast('suspended');
+    } catch (e) {
+      alert('Failed to suspend buyer: ' + e.message);
+    }
   };
-  const handleReactivate = id => {
-    setBuyers(prev => prev.map(b => b.id === id ? { ...b, status: 'active' } : b));
-    showToast('reactivated');
+
+  const handleReactivate = async (id) => {
+    try {
+      const { error: err } = await supabase
+        .from('buyers')
+        .upsert({ id, status: 'active' });
+      if (err) throw err;
+      setBuyers(prev => prev.map(b => b.id === id ? { ...b, status: 'active' } : b));
+      showToast('reactivated');
+    } catch (e) {
+      alert('Failed to reactivate buyer: ' + e.message);
+    }
   };
-  const handleDelete = id => {
-    setBuyers(prev => prev.filter(b => b.id !== id));
-    showToast('deleted');
+
+  const handleDelete = async (id) => {
+    try {
+      const { error: err } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', id);
+      if (err) throw err;
+      setBuyers(prev => prev.filter(b => b.id !== id));
+      showToast('deleted');
+    } catch (e) {
+      alert('Failed to delete buyer profile: ' + e.message);
+    }
   };
 
   const handleExportCSV = () => {
-    const headers = ['Name', 'Email', 'Phone', 'Location', 'Date Joined', 'Status', 'Total Orders', 'Total Spent'];
-    const rows = buyers.map(b => [b.name, b.email, b.phone, b.location, b.dateJoined, b.status, b.totalOrders, b.totalSpent]);
+    const headers = ['Name', 'Email', 'Phone', 'Location', 'Buyer Type', 'Date Joined', 'Status'];
+    const rows = buyers.map(b => [b.name, b.email, b.phone, b.location, b.buyerType, b.dateJoined, b.status]);
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -479,6 +431,16 @@ export default function AdminBuyersPage() {
             <Download size={14} /> Export CSV
           </button>
         </div>
+
+        {/* Error banner */}
+        {error && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#ffebee', color: '#c62828', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}>
+            <span style={{ flex: 1 }}>{error}</span>
+            <button onClick={loadBuyers} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#c62828', fontWeight: 700 }}>
+              <RefreshCw size={14} /> Retry
+            </button>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="vr-stats-row">
@@ -520,106 +482,113 @@ export default function AdminBuyersPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="fm-table-wrap">
-          <table className="fm-table">
-            <thead>
-              <tr>
-                <th>Buyer</th>
-                <th>Location</th>
-                <th>Joined</th>
-                <th style={{ textAlign: 'center' }}>Orders</th>
-                <th>Total Spent</th>
-                <th>Last Order</th>
-                <th>Status</th>
-                <th className="fm-th-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map(buyer => (
-                <tr key={buyer.id} className={buyer.status === 'suspended' ? 'bm-row-suspended' : ''}>
-                  <td>
-                    <div className="fm-td-farmer">
-                      <div className="fm-avatar-wrap">
-                        <div className="fm-avatar" style={{ width: 38, height: 38, fontSize: 14, background: avatarColor(buyer.id) }}>
-                          {getInitials(buyer.name)}
-                        </div>
-                        {buyer.status === 'active' && <span className="fm-avatar-dot" />}
-                      </div>
-                      <div className="fm-td-farmer-info">
-                        <div className="fm-td-farmer-name">{buyer.name}</div>
-                        <div className="fm-td-farmer-email">{buyer.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="vr-location-cell"><MapPin size={12} color="#aaa" />{buyer.location}</div>
-                  </td>
-                  <td>
-                    <span className="vr-date">
-                      {new Date(buyer.dateJoined).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span className="bm-orders-badge">{buyer.totalOrders}</span>
-                  </td>
-                  <td>
-                    <span className="bm-spent">₵{buyer.totalSpent.toLocaleString()}</span>
-                  </td>
-                  <td>
-                    <span className="vr-date">
-                      {new Date(buyer.lastOrder).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  </td>
-                  <td><StatusBadge status={buyer.status} /></td>
-                  <td className="fm-td-actions">
-                    <ActionsMenu
-                      buyer={buyer}
-                      onView={b => setDetailBuyer(b)}
-                      onSuspend={handleSuspend}
-                      onReactivate={handleReactivate}
-                      onDelete={b => setDeleteBuyer(b)}
-                    />
-                  </td>
-                </tr>
-              ))}
-              {paginated.length === 0 && (
+        {/* Loading state or Table */}
+        {isLoadingData ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem', gap: '0.75rem', color: '#777' }}>
+            <Loader size={22} style={{ animation: 'spin 1s linear infinite' }} />
+            <span>Loading registered buyers...</span>
+          </div>
+        ) : (
+          <div className="fm-table-wrap">
+            <table className="fm-table">
+              <thead>
                 <tr>
-                  <td colSpan={8} className="fm-empty-row">
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: '#ccc' }}>
-                      <ShoppingCart size={40} />
-                      <span>No buyers found</span>
-                    </div>
-                  </td>
+                  <th>Buyer</th>
+                  <th>Location</th>
+                  <th>Joined</th>
+                  <th>Type</th>
+                  <th style={{ textAlign: 'center' }}>Orders</th>
+                  <th>Total Spent</th>
+                  <th>Status</th>
+                  <th className="fm-th-actions">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {paginated.map(buyer => (
+                  <tr key={buyer.id} className={buyer.status === 'suspended' ? 'bm-row-suspended' : ''}>
+                    <td>
+                      <div className="fm-td-farmer">
+                        <div className="fm-avatar-wrap">
+                          <div className="fm-avatar" style={{ width: 38, height: 38, fontSize: 14, background: avatarColor(buyer.id) }}>
+                            {getInitials(buyer.name)}
+                          </div>
+                          {buyer.status === 'active' && <span className="fm-avatar-dot" />}
+                        </div>
+                        <div className="fm-td-farmer-info">
+                          <div className="fm-td-farmer-name">{buyer.name}</div>
+                          <div className="fm-td-farmer-email">{buyer.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="vr-location-cell"><MapPin size={12} color="#aaa" />{buyer.location}</div>
+                    </td>
+                    <td>
+                      <span className="vr-date">
+                        {buyer.dateJoined ? new Date(buyer.dateJoined).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ textTransform: 'capitalize', fontSize: '0.85rem', fontWeight: 600, color: '#555' }}>{buyer.buyerType}</span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="bm-orders-badge">{buyer.totalOrders}</span>
+                    </td>
+                    <td>
+                      <span className="bm-spent">₵{buyer.totalSpent.toLocaleString()}</span>
+                    </td>
+                    <td><StatusBadge status={buyer.status} /></td>
+                    <td className="fm-td-actions">
+                      <ActionsMenu
+                        buyer={buyer}
+                        onView={b => setDetailBuyer(b)}
+                        onSuspend={handleSuspend}
+                        onReactivate={handleReactivate}
+                        onDelete={b => setDeleteBuyer(b)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+                {paginated.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="fm-empty-row">
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: '#ccc' }}>
+                        <ShoppingCart size={40} />
+                        <span>No buyers found</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
-        <div className="fm-pagination">
-          <div className="fm-pagination-info">
-            Showing {filtered.length === 0 ? 0 : (currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, filtered.length)} of {filtered.length} buyers
-          </div>
-          <div className="fm-pagination-controls">
-            <button className="fm-pagination-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
-              <ChevronLeft size={14} /> Prev
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-              <button
-                key={p}
-                className={`fm-pagination-btn fm-pagination-page ${currentPage === p ? 'active' : ''}`}
-                onClick={() => setCurrentPage(p)}
-              >
-                {p}
+        {!isLoadingData && (
+          <div className="fm-pagination">
+            <div className="fm-pagination-info">
+              Showing {filtered.length === 0 ? 0 : (currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, filtered.length)} of {filtered.length} buyers
+            </div>
+            <div className="fm-pagination-controls">
+              <button className="fm-pagination-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                <ChevronLeft size={14} /> Prev
               </button>
-            ))}
-            <button className="fm-pagination-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
-              Next <ChevronRight size={14} />
-            </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button
+                  key={p}
+                  className={`fm-pagination-btn fm-pagination-page ${currentPage === p ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(p)}
+                >
+                  {p}
+                </button>
+              ))}
+              <button className="fm-pagination-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                Next <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Modals */}
         <BuyerDetailModal
@@ -637,6 +606,10 @@ export default function AdminBuyersPage() {
           onConfirm={handleDelete}
         />
       </div>
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </AdminDashboardLayout>
   );
 }

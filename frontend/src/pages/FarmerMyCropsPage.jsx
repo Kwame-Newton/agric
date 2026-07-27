@@ -52,6 +52,42 @@ const FALLBACK_IMAGES = {
   Spices:     'https://images.unsplash.com/photo-1583119022894-919a68a3d0e3?auto=format&fit=crop&w=300&q=70',
 };
 
+// Converts user-uploaded image files into optimized Base64 Data URLs stored directly in DB
+function fileToDataUrl(file, maxWidth = 600, maxHeight = 600) {
+  return new Promise((resolve) => {
+    if (!file) return resolve(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width / height > maxWidth / maxHeight) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function FarmerMyCropsPage() {
   const { user } = useAuth();
   const [crops, setCrops] = useState([]);
@@ -95,7 +131,16 @@ export default function FarmerMyCropsPage() {
         .order('created_at', { ascending: false });
 
       if (err) throw err;
-      setCrops(data || []);
+      
+      // Clean up any blob: URLs that might have been saved in earlier tests
+      const cleaned = (data || []).map(c => ({
+        ...c,
+        image_url: c.image_url && !c.image_url.startsWith('blob:')
+          ? c.image_url
+          : (FALLBACK_IMAGES[c.category] || null)
+      }));
+
+      setCrops(cleaned);
     } catch (e) {
       setError('Failed to load crops. Please try refreshing.');
       console.error('loadCrops error:', e);
@@ -158,31 +203,6 @@ export default function FarmerMyCropsPage() {
 
   const closeModal = () => { setIsModalOpen(false); setFormError(''); };
 
-  // ── Upload image to Supabase Storage ─────────────────────
-  // Returns the public URL or null if upload fails / no file
-  const tryUploadImage = async (file, cropId) => {
-    if (!file) return null;
-    try {
-      const ext = file.name.split('.').pop().toLowerCase();
-      const path = `${user.id}/${cropId}.${ext}`;
-      const { error: uploadErr } = await supabase.storage
-        .from('crop-images')
-        .upload(path, file, { upsert: true, contentType: file.type });
-
-      if (uploadErr) {
-        // If the bucket doesn't exist yet, silently skip the image
-        console.warn('Image upload skipped:', uploadErr.message);
-        return null;
-      }
-
-      const { data } = supabase.storage.from('crop-images').getPublicUrl(path);
-      return data?.publicUrl || null;
-    } catch (e) {
-      console.warn('Image upload error:', e.message);
-      return null;
-    }
-  };
-
   // ── Save crop ────────────────────────────────────────────
   const saveCrop = async () => {
     setFormError('');
@@ -196,11 +216,25 @@ export default function FarmerMyCropsPage() {
       const quantity = normalizeNumber(form.quantity);
       const derivedStatus = quantity <= 0 ? 'out_of_stock' : 'active';
 
-      // Final image URL: prefer newly uploaded file, fall back to existing URL or category fallback
-      let finalImageUrl = form.image_url || form.imagePreview || FALLBACK_IMAGES[form.category] || null;
+      // 1. Process image file if selected into permanent Data URL
+      let finalImageUrl = form.image_url || null;
+
+      if (form.imageFile) {
+        const dataUrl = await fileToDataUrl(form.imageFile);
+        if (dataUrl) {
+          finalImageUrl = dataUrl;
+        }
+      }
+
+      // Never allow blob: URLs in database
+      if (!finalImageUrl || finalImageUrl.startsWith('blob:')) {
+        finalImageUrl = form.imagePreview && !form.imagePreview.startsWith('blob:')
+          ? form.imagePreview
+          : (FALLBACK_IMAGES[form.category] || null);
+      }
 
       if (modalMode === 'add') {
-        const { data: newCrop, error: insertErr } = await supabase
+        const { error: insertErr } = await supabase
           .from('crops')
           .insert({
             farmer_id:   user.id,
@@ -213,27 +247,11 @@ export default function FarmerMyCropsPage() {
             location:    form.location.trim(),
             status:      derivedStatus,
             image_url:   finalImageUrl,
-          })
-          .select()
-          .single();
+          });
 
         if (insertErr) throw insertErr;
 
-        // Try uploading image after insert (non-blocking)
-        if (form.imageFile) {
-          const uploadedUrl = await tryUploadImage(form.imageFile, newCrop.id);
-          if (uploadedUrl) {
-            await supabase.from('crops').update({ image_url: uploadedUrl }).eq('id', newCrop.id);
-          }
-        }
-
       } else {
-        // Edit mode: try to upload new image if provided
-        if (form.imageFile) {
-          const uploadedUrl = await tryUploadImage(form.imageFile, selectedCropId);
-          if (uploadedUrl) finalImageUrl = uploadedUrl;
-        }
-
         const { error: updateErr } = await supabase
           .from('crops')
           .update({
