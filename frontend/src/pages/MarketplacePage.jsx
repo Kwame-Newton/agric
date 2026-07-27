@@ -217,8 +217,8 @@ export default function MarketplacePage() {
     const fetchCrops = async () => {
       try {
         setLoading(true);
-        
-        // Fetch crops with farmer data using RLS
+
+        // Fetch active crops + join profiles to get the farmer's full name
         const { data, error } = await supabase
           .from('crops')
           .select(`
@@ -232,37 +232,38 @@ export default function MarketplacePage() {
             location,
             image_url,
             status,
-            profiles:farmer_id(name)
+            farmer_id,
+            profiles:farmer_id ( full_name )
           `)
           .eq('status', 'active')
           .order('created_at', { ascending: false });
 
         if (error) {
-          console.error('Error fetching crops:', error);
-          setCrops(allProducts); // Fallback to demo data
+          console.error('Marketplace fetch error:', error.message);
+          setCrops(allProducts); // fall back to demo data on error
         } else if (data && data.length > 0) {
-          // Transform Supabase crops to match component structure
           const transformedCrops = data.map(crop => ({
-            id: crop.id,
-            name: crop.name,
-            farm: crop.profiles?.name || 'Unknown Farm',
-            location: crop.location || 'Unknown',
-            price: crop.price,
-            unit: crop.unit,
+            id:       crop.id,
+            name:     crop.name,
+            farm:     crop.profiles?.full_name || 'Agrilink Farm',
+            location: crop.location || '',
+            price:    Number(crop.price),
+            unit:     crop.unit,
             category: crop.category.toLowerCase(),
-            rating: 4.5, // Default rating since it's not in the crops table
-            reviews: 0,
-            image: crop.image_url,
-            inStock: crop.quantity > 0,
-            badge: crop.quantity > 0 ? '' : 'Out of Stock',
+            rating:   4.5,
+            reviews:  0,
+            image:    crop.image_url || null,
+            inStock:  Number(crop.quantity) > 0,
+            badge:    '',
           }));
           setCrops(transformedCrops);
         } else {
-          setCrops(allProducts); // Fallback to demo data if no crops
+          // No crops in DB yet — show demo data so the page isn't empty
+          setCrops(allProducts);
         }
       } catch (err) {
-        console.error('Error fetching crops:', err);
-        setCrops(allProducts); // Fallback to demo data on error
+        console.error('Marketplace error:', err);
+        setCrops(allProducts);
       } finally {
         setLoading(false);
       }

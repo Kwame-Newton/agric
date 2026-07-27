@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   X,
   Loader,
+  RefreshCw,
 } from 'lucide-react';
 
 const cropCategories = ['Vegetables', 'Fruits', 'Grains', 'Tubers', 'Spices'];
@@ -25,9 +26,9 @@ const cropStatuses = [
 
 function StatusBadge({ status }) {
   const map = {
-    active: { label: 'Active', className: 'fm-badge fm-badge-active' },
-    paused: { label: 'Paused', className: 'fm-badge fm-badge-paused' },
-    out_of_stock: { label: 'Out of Stock', className: 'fm-badge fm-badge-oos' },
+    active:       { label: 'Active',        className: 'fm-badge fm-badge-active' },
+    paused:       { label: 'Paused',        className: 'fm-badge fm-badge-paused' },
+    out_of_stock: { label: 'Out of Stock',  className: 'fm-badge fm-badge-oos'    },
   };
   const info = map[status] || { label: status, className: 'fm-badge' };
   return <span className={info.className}>{info.label}</span>;
@@ -43,6 +44,14 @@ function normalizeNumber(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+const FALLBACK_IMAGES = {
+  Vegetables: 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=300&q=70',
+  Fruits:     'https://images.unsplash.com/photo-1547514701-42782101795e?auto=format&fit=crop&w=300&q=70',
+  Grains:     'https://images.unsplash.com/photo-1577449923886-df3d846797af?auto=format&fit=crop&w=300&q=70',
+  Tubers:     'https://images.unsplash.com/photo-1631207558636-d24c18bcfd6e?auto=format&fit=crop&w=300&q=70',
+  Spices:     'https://images.unsplash.com/photo-1583119022894-919a68a3d0e3?auto=format&fit=crop&w=300&q=70',
+};
+
 export default function FarmerMyCropsPage() {
   const { user } = useAuth();
   const [crops, setCrops] = useState([]);
@@ -55,11 +64,11 @@ export default function FarmerMyCropsPage() {
   const [category, setCategory] = useState('all');
   const [status, setStatus] = useState('all');
 
-  const [modalMode, setModalMode] = useState('add'); // add | edit
+  const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCropId, setSelectedCropId] = useState(null);
 
-  const [form, setForm] = useState({
+  const emptyForm = {
     name: '',
     category: cropCategories[0],
     description: '',
@@ -67,11 +76,13 @@ export default function FarmerMyCropsPage() {
     unit: 'kg',
     quantity: '',
     location: '',
-    imageFile: null,
-    imagePreview: '',
-  });
+    image_url: '',        // direct URL field
+    imageFile: null,      // local file selection
+    imagePreview: '',     // local preview
+  };
+  const [form, setForm] = useState(emptyForm);
 
-  // ── Load crops from Supabase ─────────────────────────────
+  // ── Load crops ──────────────────────────────────────────
   const loadCrops = useCallback(async () => {
     if (!user?.id) return;
     setIsLoading(true);
@@ -86,34 +97,31 @@ export default function FarmerMyCropsPage() {
       if (err) throw err;
       setCrops(data || []);
     } catch (e) {
-      setError('Failed to load crops. Please refresh.');
-      console.error(e);
+      setError('Failed to load crops. Please try refreshing.');
+      console.error('loadCrops error:', e);
     } finally {
       setIsLoading(false);
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    loadCrops();
-  }, [loadCrops]);
+  useEffect(() => { loadCrops(); }, [loadCrops]);
 
-  const selectedCrop = useMemo(() => crops.find(c => c.id === selectedCropId) || null, [crops, selectedCropId]);
+  const selectedCrop = useMemo(
+    () => crops.find(c => c.id === selectedCropId) || null,
+    [crops, selectedCropId]
+  );
 
-  const totals = useMemo(() => {
-    const total = crops.length;
-    const active = crops.filter(c => getDerivedStatus(c.quantity, c.status) === 'active').length;
-    const oos = crops.filter(c => getDerivedStatus(c.quantity, c.status) === 'out_of_stock').length;
-    return { total, active, oos };
-  }, [crops]);
+  const totals = useMemo(() => ({
+    total:  crops.length,
+    active: crops.filter(c => getDerivedStatus(c.quantity, c.status) === 'active').length,
+    oos:    crops.filter(c => getDerivedStatus(c.quantity, c.status) === 'out_of_stock').length,
+  }), [crops]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return crops.filter(c => {
       const derived = getDerivedStatus(c.quantity, c.status);
-      if (q) {
-        const hay = `${c.name} ${c.category}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
+      if (q && !`${c.name} ${c.category}`.toLowerCase().includes(q)) return false;
       if (category !== 'all' && c.category !== category) return false;
       if (status !== 'all' && derived !== status) return false;
       return true;
@@ -125,17 +133,7 @@ export default function FarmerMyCropsPage() {
     setModalMode('add');
     setSelectedCropId(null);
     setFormError('');
-    setForm({
-      name: '',
-      category: cropCategories[0],
-      description: '',
-      price: '',
-      unit: 'kg',
-      quantity: '',
-      location: '',
-      imageFile: null,
-      imagePreview: '',
-    });
+    setForm(emptyForm);
     setIsModalOpen(true);
   };
 
@@ -144,96 +142,110 @@ export default function FarmerMyCropsPage() {
     setSelectedCropId(crop.id);
     setFormError('');
     setForm({
-      name: crop.name,
-      category: crop.category,
-      description: crop.description || '',
-      price: String(crop.price ?? ''),
-      unit: crop.unit ?? 'kg',
-      quantity: String(crop.quantity ?? ''),
-      location: crop.location ?? '',
-      imageFile: null,
+      name:         crop.name,
+      category:     crop.category,
+      description:  crop.description || '',
+      price:        String(crop.price ?? ''),
+      unit:         crop.unit ?? 'kg',
+      quantity:     String(crop.quantity ?? ''),
+      location:     crop.location ?? '',
+      image_url:    crop.image_url || '',
+      imageFile:    null,
       imagePreview: crop.image_url || '',
     });
     setIsModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setFormError('');
-  };
+  const closeModal = () => { setIsModalOpen(false); setFormError(''); };
 
   // ── Upload image to Supabase Storage ─────────────────────
-  const uploadImage = async (file, cropId) => {
-    const ext = file.name.split('.').pop();
-    const path = `crops/${user.id}/${cropId}.${ext}`;
-    const { error: uploadErr } = await supabase.storage
-      .from('crop-images')
-      .upload(path, file, { upsert: true });
+  // Returns the public URL or null if upload fails / no file
+  const tryUploadImage = async (file, cropId) => {
+    if (!file) return null;
+    try {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const path = `${user.id}/${cropId}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from('crop-images')
+        .upload(path, file, { upsert: true, contentType: file.type });
 
-    if (uploadErr) throw uploadErr;
+      if (uploadErr) {
+        // If the bucket doesn't exist yet, silently skip the image
+        console.warn('Image upload skipped:', uploadErr.message);
+        return null;
+      }
 
-    const { data } = supabase.storage.from('crop-images').getPublicUrl(path);
-    return data.publicUrl;
+      const { data } = supabase.storage.from('crop-images').getPublicUrl(path);
+      return data?.publicUrl || null;
+    } catch (e) {
+      console.warn('Image upload error:', e.message);
+      return null;
+    }
   };
 
-  // ── Save crop (insert or update) ─────────────────────────
+  // ── Save crop ────────────────────────────────────────────
   const saveCrop = async () => {
     setFormError('');
-    if (!form.name.trim()) { setFormError('Crop name is required.'); return; }
-    if (!form.price || isNaN(Number(form.price))) { setFormError('Please enter a valid price.'); return; }
-    if (!form.quantity || isNaN(Number(form.quantity))) { setFormError('Please enter a valid quantity.'); return; }
-    if (!form.location.trim()) { setFormError('Location is required.'); return; }
+    if (!form.name.trim())     { setFormError('Crop name is required.'); return; }
+    if (!form.price || isNaN(Number(form.price)))    { setFormError('Enter a valid price.'); return; }
+    if (!form.quantity || isNaN(Number(form.quantity))) { setFormError('Enter a valid quantity.'); return; }
+    if (!form.location.trim()) { setFormError('Pickup location is required.'); return; }
 
     setSaveLoading(true);
     try {
       const quantity = normalizeNumber(form.quantity);
       const derivedStatus = quantity <= 0 ? 'out_of_stock' : 'active';
 
+      // Final image URL: prefer newly uploaded file, fall back to existing URL or category fallback
+      let finalImageUrl = form.image_url || form.imagePreview || FALLBACK_IMAGES[form.category] || null;
+
       if (modalMode === 'add') {
-        // Insert new crop first to get the ID
         const { data: newCrop, error: insertErr } = await supabase
           .from('crops')
           .insert({
-            farmer_id: user.id,
-            name: form.name.trim(),
-            category: form.category,
+            farmer_id:   user.id,
+            name:        form.name.trim(),
+            category:    form.category,
             description: form.description,
-            price: normalizeNumber(form.price),
-            unit: form.unit,
+            price:       normalizeNumber(form.price),
+            unit:        form.unit || 'kg',
             quantity,
-            location: form.location.trim(),
-            status: derivedStatus,
+            location:    form.location.trim(),
+            status:      derivedStatus,
+            image_url:   finalImageUrl,
           })
           .select()
           .single();
 
         if (insertErr) throw insertErr;
 
-        // Upload image if selected
-        let imageUrl = null;
+        // Try uploading image after insert (non-blocking)
         if (form.imageFile) {
-          imageUrl = await uploadImage(form.imageFile, newCrop.id);
-          await supabase.from('crops').update({ image_url: imageUrl }).eq('id', newCrop.id);
+          const uploadedUrl = await tryUploadImage(form.imageFile, newCrop.id);
+          if (uploadedUrl) {
+            await supabase.from('crops').update({ image_url: uploadedUrl }).eq('id', newCrop.id);
+          }
         }
+
       } else {
-        // Update existing crop
-        let imageUrl = form.imagePreview;
+        // Edit mode: try to upload new image if provided
         if (form.imageFile) {
-          imageUrl = await uploadImage(form.imageFile, selectedCropId);
+          const uploadedUrl = await tryUploadImage(form.imageFile, selectedCropId);
+          if (uploadedUrl) finalImageUrl = uploadedUrl;
         }
 
         const { error: updateErr } = await supabase
           .from('crops')
           .update({
-            name: form.name.trim(),
-            category: form.category,
+            name:        form.name.trim(),
+            category:    form.category,
             description: form.description,
-            price: normalizeNumber(form.price),
-            unit: form.unit,
+            price:       normalizeNumber(form.price),
+            unit:        form.unit || 'kg',
             quantity,
-            location: form.location.trim(),
-            status: derivedStatus,
-            image_url: imageUrl,
+            location:    form.location.trim(),
+            status:      derivedStatus,
+            image_url:   finalImageUrl,
           })
           .eq('id', selectedCropId)
           .eq('farmer_id', user.id);
@@ -243,18 +255,18 @@ export default function FarmerMyCropsPage() {
 
       setIsModalOpen(false);
       await loadCrops();
+
     } catch (e) {
-      console.error(e);
+      console.error('saveCrop error:', e);
       setFormError(e.message || 'Failed to save crop. Please try again.');
     } finally {
       setSaveLoading(false);
     }
   };
 
-  // ── Delete crop ──────────────────────────────────────────
+  // ── Delete ───────────────────────────────────────────────
   const deleteCrop = async (cropId) => {
-    const ok = window.confirm('Delete this crop listing?');
-    if (!ok) return;
+    if (!window.confirm('Delete this crop listing from the marketplace?')) return;
     const { error: delErr } = await supabase
       .from('crops')
       .delete()
@@ -262,20 +274,19 @@ export default function FarmerMyCropsPage() {
       .eq('farmer_id', user.id);
 
     if (delErr) {
-      alert('Failed to delete crop: ' + delErr.message);
+      alert('Failed to delete: ' + delErr.message);
     } else {
       setCrops(prev => prev.filter(c => c.id !== cropId));
     }
   };
 
-  // ── Toggle paused/active ─────────────────────────────────
+  // ── Toggle paused / active ───────────────────────────────
   const toggleAvailable = async (crop) => {
     const derived = getDerivedStatus(crop.quantity, crop.status);
     if (derived === 'out_of_stock') {
-      alert('This crop is out of stock. Set quantity > 0 to activate.');
+      alert('This crop is out of stock. Update quantity > 0 first.');
       return;
     }
-
     const nextStatus = crop.status === 'paused' ? 'active' : 'paused';
     const { error: updErr } = await supabase
       .from('crops')
@@ -288,12 +299,25 @@ export default function FarmerMyCropsPage() {
     }
   };
 
+  // ── Handle image file pick ───────────────────────────────
+  const handleImageFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setForm(f => ({
+      ...f,
+      imageFile:    file,
+      imagePreview: URL.createObjectURL(file),
+      image_url:    '', // clear manual URL if file chosen
+    }));
+  };
+
+  // ── Render ───────────────────────────────────────────────
   return (
     <div className="fm-page">
       <div className="fm-header">
         <div>
           <h2 className="fm-title">My Crops</h2>
-          <div className="fm-subtitle">Manage your crops, availability, and listing details.</div>
+          <div className="fm-subtitle">Manage your listings. Active crops appear in the buyer marketplace.</div>
         </div>
         <button type="button" className="fm-add-btn" onClick={openAddModal}>
           <Plus size={16} /> Add New Crop
@@ -302,8 +326,15 @@ export default function FarmerMyCropsPage() {
 
       {/* Error banner */}
       {error && (
-        <div style={{ background: '#ffebee', color: '#c62828', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}>
-          {error}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.75rem',
+          background: '#ffebee', color: '#c62828',
+          padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem'
+        }}>
+          <span style={{ flex: 1 }}>{error}</span>
+          <button onClick={loadCrops} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#c62828', fontWeight: 700 }}>
+            <RefreshCw size={14} /> Retry
+          </button>
         </div>
       )}
 
@@ -335,24 +366,18 @@ export default function FarmerMyCropsPage() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-
         <div className="fm-filter-selects">
           <select className="fm-select" value={category} onChange={(e) => setCategory(e.target.value)}>
             <option value="all">All Categories</option>
-            {cropCategories.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
+            {cropCategories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-
           <select className="fm-select" value={status} onChange={(e) => setStatus(e.target.value)}>
-            {cropStatuses.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
+            {cropStatuses.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
       </div>
 
-      {/* Loading state */}
+      {/* Loading */}
       {isLoading ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem', gap: '0.75rem', color: '#777' }}>
           <Loader size={22} style={{ animation: 'spin 1s linear infinite' }} />
@@ -377,13 +402,16 @@ export default function FarmerMyCropsPage() {
               {filtered.map(crop => {
                 const derived = getDerivedStatus(crop.quantity, crop.status);
                 const isPaused = derived !== 'out_of_stock' && crop.status === 'paused';
+                const imgSrc = crop.image_url || FALLBACK_IMAGES[crop.category];
                 return (
                   <tr key={crop.id}>
                     <td>
                       <div className="fm-thumb">
-                        {crop.image_url
-                          ? <img src={crop.image_url} alt={crop.name} />
-                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4f2', borderRadius: '6px' }}><ImageIcon size={20} color="#aaa" /></div>
+                        {imgSrc
+                          ? <img src={imgSrc} alt={crop.name} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4f2', borderRadius: '6px' }}>
+                              <ImageIcon size={20} color="#aaa" />
+                            </div>
                         }
                       </div>
                     </td>
@@ -403,16 +431,11 @@ export default function FarmerMyCropsPage() {
                         <button type="button" className="fm-action fm-action-danger" onClick={() => deleteCrop(crop.id)}>
                           <Trash2 size={16} /> Delete
                         </button>
-                        <button
-                          type="button"
-                          className="fm-action"
-                          onClick={() => toggleAvailable(crop)}
-                        >
-                          {isPaused ? (
-                            <><PlayCircle size={16} /> Activate</>
-                          ) : (
-                            <><PauseCircle size={16} /> Pause</>
-                          )}
+                        <button type="button" className="fm-action" onClick={() => toggleAvailable(crop)}>
+                          {isPaused
+                            ? <><PlayCircle size={16} /> Activate</>
+                            : <><PauseCircle size={16} /> Pause</>
+                          }
                         </button>
                       </div>
                     </td>
@@ -426,21 +449,25 @@ export default function FarmerMyCropsPage() {
         <div className="fm-empty">
           <div className="fm-empty-emoji">🌱</div>
           <h3>No crops found</h3>
-          <p>{crops.length === 0 ? 'You have not listed any crops yet.' : 'Try adjusting your filters.'}</p>
+          <p>{crops.length === 0 ? 'You have not listed any crops yet. Add your first crop to appear in the marketplace!' : 'Try adjusting your filters.'}</p>
           <button type="button" className="fm-add-btn fm-add-btn-solid" onClick={openAddModal}>
-            <Plus size={16} /> Add Your First Crop
+            <Plus size={16} /> {crops.length === 0 ? 'Add Your First Crop' : 'Add Crop'}
           </button>
         </div>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* ── Add / Edit Modal ── */}
       {isModalOpen && (
         <div className="fm-modal-overlay" onClick={closeModal}>
           <div className="fm-modal" onClick={(e) => e.stopPropagation()}>
             <div className="fm-modal-header">
               <div>
-                <h3 className="fm-modal-title">{modalMode === 'add' ? 'Add Crop' : 'Edit Crop'}</h3>
-                <div className="fm-modal-subtitle">Fill out the details to list your crop in the marketplace.</div>
+                <h3 className="fm-modal-title">{modalMode === 'add' ? 'Add New Crop' : 'Edit Crop'}</h3>
+                <div className="fm-modal-subtitle">
+                  {modalMode === 'add'
+                    ? 'This crop will appear live in the buyer marketplace once saved.'
+                    : 'Changes are immediately reflected in the marketplace.'}
+                </div>
               </div>
               <button type="button" className="fm-modal-close" onClick={closeModal}>
                 <X size={18} />
@@ -448,13 +475,19 @@ export default function FarmerMyCropsPage() {
             </div>
 
             <div className="fm-modal-body">
+              {/* Form error */}
               {formError && (
-                <div style={{ background: '#ffebee', color: '#c62828', padding: '0.65rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: 600 }}>
-                  {formError}
+                <div style={{
+                  background: '#ffebee', color: '#c62828',
+                  padding: '0.65rem 1rem', borderRadius: '8px',
+                  marginBottom: '1rem', fontSize: '0.85rem', fontWeight: 600
+                }}>
+                  ⚠️ {formError}
                 </div>
               )}
 
               <div className="fm-form-grid">
+                {/* Name */}
                 <div className="fm-form-group">
                   <label className="fm-label">Crop Name *</label>
                   <input
@@ -465,6 +498,7 @@ export default function FarmerMyCropsPage() {
                   />
                 </div>
 
+                {/* Category */}
                 <div className="fm-form-group">
                   <label className="fm-label">Category *</label>
                   <select
@@ -472,12 +506,11 @@ export default function FarmerMyCropsPage() {
                     value={form.category}
                     onChange={(e) => setForm(f => ({ ...f, category: e.target.value }))}
                   >
-                    {cropCategories.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {cropCategories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
 
+                {/* Description */}
                 <div className="fm-form-group fm-span-2">
                   <label className="fm-label">Description</label>
                   <textarea
@@ -485,10 +518,11 @@ export default function FarmerMyCropsPage() {
                     value={form.description}
                     onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
                     rows={3}
-                    placeholder="Short description about your crop"
+                    placeholder="Describe your crop: freshness, harvest date, quality, etc."
                   />
                 </div>
 
+                {/* Price */}
                 <div className="fm-form-group">
                   <label className="fm-label">Price (₵) *</label>
                   <input
@@ -497,19 +531,32 @@ export default function FarmerMyCropsPage() {
                     onChange={(e) => setForm(f => ({ ...f, price: e.target.value }))}
                     placeholder="e.g. 12"
                     inputMode="decimal"
+                    type="number"
+                    min="0"
+                    step="0.01"
                   />
                 </div>
 
+                {/* Unit */}
                 <div className="fm-form-group">
-                  <label className="fm-label">Unit *</label>
-                  <input
+                  <label className="fm-label">Selling Unit *</label>
+                  <select
                     className="fm-input"
                     value={form.unit}
                     onChange={(e) => setForm(f => ({ ...f, unit: e.target.value }))}
-                    placeholder="kg"
-                  />
+                  >
+                    <option value="kg">kg</option>
+                    <option value="g">gram (g)</option>
+                    <option value="bag">bag</option>
+                    <option value="crate">crate</option>
+                    <option value="bunch">bunch</option>
+                    <option value="dozen">dozen</option>
+                    <option value="piece">piece</option>
+                    <option value="litre">litre</option>
+                  </select>
                 </div>
 
+                {/* Quantity */}
                 <div className="fm-form-group">
                   <label className="fm-label">Available Quantity *</label>
                   <input
@@ -518,9 +565,13 @@ export default function FarmerMyCropsPage() {
                     onChange={(e) => setForm(f => ({ ...f, quantity: e.target.value }))}
                     placeholder="e.g. 120"
                     inputMode="numeric"
+                    type="number"
+                    min="0"
+                    step="1"
                   />
                 </div>
 
+                {/* Location */}
                 <div className="fm-form-group">
                   <label className="fm-label">Pickup Location *</label>
                   <input
@@ -531,31 +582,45 @@ export default function FarmerMyCropsPage() {
                   />
                 </div>
 
+                {/* Image */}
                 <div className="fm-form-group fm-span-2">
-                  <label className="fm-label">Crop Image</label>
-                  <div className="fm-upload">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setForm(f => ({
-                          ...f,
-                          imageFile: file,
-                          imagePreview: URL.createObjectURL(file),
-                        }));
-                      }}
-                    />
-                    <div className="fm-upload-hint">
-                      <ImageIcon size={16} /> Upload one image of your crop.
+                  <label className="fm-label">Crop Photo</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {/* File upload */}
+                    <div className="fm-upload">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFile}
+                        id="crop-image-upload"
+                      />
+                      <div className="fm-upload-hint">
+                        <ImageIcon size={16} /> Pick a photo from your device
+                      </div>
                     </div>
+                    {/* OR URL */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ flex: 1, height: 1, background: '#e0e0e0' }} />
+                      <span style={{ fontSize: '0.78rem', color: '#aaa', whiteSpace: 'nowrap' }}>or paste an image URL</span>
+                      <div style={{ flex: 1, height: 1, background: '#e0e0e0' }} />
+                    </div>
+                    <input
+                      className="fm-input"
+                      value={form.image_url}
+                      onChange={(e) => setForm(f => ({ ...f, image_url: e.target.value, imagePreview: e.target.value, imageFile: null }))}
+                      placeholder="https://..."
+                    />
                   </div>
 
-                  {form.imagePreview && (
+                  {/* Preview */}
+                  {(form.imagePreview || form.image_url) && (
                     <div className="fm-image-preview-grid" style={{ marginTop: '0.75rem' }}>
                       <div className="fm-image-preview">
-                        <img src={form.imagePreview} alt="preview" />
+                        <img
+                          src={form.imagePreview || form.image_url}
+                          alt="preview"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
                       </div>
                     </div>
                   )}
@@ -567,8 +632,16 @@ export default function FarmerMyCropsPage() {
               <button type="button" className="fm-btn fm-btn-secondary" onClick={closeModal}>
                 Cancel
               </button>
-              <button type="button" className="fm-btn fm-btn-primary" onClick={saveCrop} disabled={saveLoading}>
-                {saveLoading ? 'Saving...' : (modalMode === 'add' ? 'Add Crop' : 'Save Changes')}
+              <button
+                type="button"
+                className="fm-btn fm-btn-primary"
+                onClick={saveCrop}
+                disabled={saveLoading}
+              >
+                {saveLoading
+                  ? <><Loader size={15} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</>
+                  : (modalMode === 'add' ? '🌱 Add to Marketplace' : '✅ Save Changes')
+                }
               </button>
             </div>
           </div>
@@ -576,7 +649,9 @@ export default function FarmerMyCropsPage() {
       )}
 
       {/* Spinner animation */}
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
