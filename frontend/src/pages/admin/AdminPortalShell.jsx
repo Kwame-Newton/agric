@@ -25,7 +25,7 @@ export function AdminPortalShell({ children }) {
 
         <nav className="admin-sidebar-nav">
           <Link to="/admin/dashboard" className="admin-sidebar-link">📊 Dashboard</Link>
-          <Link to="/admin/AdminFarmerManagementPage" className="admin-sidebar-link">👨‍🌾 Farmer Management</Link>
+          <Link to="/admin/farmers" className="admin-sidebar-link">👨‍🌾 Farmer Management</Link>
           <Link to="/admin/buyers" className="admin-sidebar-link">🛒 Buyer Management</Link>
           <Link to="/admin/crops" className="admin-sidebar-link">🌽 Crop Listings</Link>
           <Link to="/admin/orders" className="admin-sidebar-link">📦 Orders</Link>

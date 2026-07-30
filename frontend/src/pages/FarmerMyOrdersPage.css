@@ -25,6 +25,35 @@
   font-size:0.95rem;
 }
 
+.fm-orders-btn-subtle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fm-orders-btn-subtle:hover {
+  background: var(--bg-offset);
+  border-color: var(--primary);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 .fm-orders-stats{
   display:grid;
   grid-template-columns: repeat(4, 1fr);

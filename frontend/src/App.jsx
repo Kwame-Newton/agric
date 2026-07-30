@@ -27,6 +27,7 @@ import AdminFarmerManagementPage from './pages/admin/AdminFarmerManagementPage';
 import AdminVerificationPage from './pages/admin/AdminVerificationPage';
 import AdminBuyersPage from './pages/admin/AdminBuyersPage';
 import AdminCropsPage from './pages/admin/AdminCropsPage';
+import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 
 function Layout({ children }) {
   return (
@@ -97,6 +98,16 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminCropsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin - Orders */}
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminOrdersPage />
               </ProtectedRoute>
             }
           />
