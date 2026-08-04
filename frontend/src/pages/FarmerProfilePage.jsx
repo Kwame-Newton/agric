@@ -1,40 +1,32 @@
-import React, { useMemo, useState } from 'react';
-import { ShieldCheck, Eye, Lock, Image as ImageIcon, Save } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ShieldCheck, Eye, Lock, Save, AlertTriangle, Loader2, CheckCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../supabaseClient';
 import './FarmerProfilePage.css';
 
 const GHANA_REGIONS = [
-  'Greater Accra',
-  'Ashanti',
-  'Brong-Ahafo',
-  'Central',
-  'Eastern',
-  'Northern',
-  'North East',
-  'Upper East',
-  'Upper West',
-  'Volta',
-  'Western',
-  'Western North',
+  'Greater Accra', 'Ashanti', 'Brong-Ahafo', 'Central', 'Eastern',
+  'Northern', 'North East', 'Upper East', 'Upper West', 'Volta', 'Western', 'Western North',
 ];
 
 function formatDate(d) {
-  // d is a Date instance
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
 }
 
-function SuccessToast({ toast, onClose }) {
-  if (!toast) return null;
+function Toast({ msg, type = 'success', onClose }) {
+  if (!msg) return null;
   return (
-    <div className="fp-toast" role="status" aria-live="polite">
+    <div className={`fp-toast fp-toast-${type}`} role="status" aria-live="polite">
       <div className="fp-toast-inner">
-        <span className="fp-toast-icon">✓</span>
+        <span className="fp-toast-icon">
+          {type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+        </span>
         <div className="fp-toast-msg">
-          <div className="fp-toast-title">Saved successfully</div>
-          <div className="fp-toast-desc">{toast}</div>
+          <div className="fp-toast-title">{type === 'success' ? 'Success' : 'Error'}</div>
+          <div className="fp-toast-desc">{msg}</div>
         </div>
-        <button className="fp-toast-close" onClick={onClose} aria-label="Close toast">
-          ×
-        </button>
+        <button className="fp-toast-close" onClick={onClose} aria-label="Close">×</button>
       </div>
     </div>
   );
@@ -50,138 +42,222 @@ function Field({ label, children }) {
 }
 
 export default function FarmerProfilePage() {
-  const mock = useMemo(() => {
-    const coverPhoto =
-      'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=1400&q=70';
-    const avatar =
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=70';
+  const { user, logout } = useAuth();
 
-    const memberSince = new Date('2019-07-14T00:00:00.000Z');
-    const profileVerified = true;
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState({ msg: '', type: 'success' });
 
-    const farm = {
-      name: 'Kofi Green Valley Farm',
-      description:
-        'We grow high-quality maize, tomatoes, and yam using sustainable farming practices and careful post-harvest handling.',
-      location: 'Suhum, Eastern Region, Ghana',
-      years: 7,
-      cropsSpeciality: 'Maize, Tomatoes, Yam',
-      coverPhoto,
-      avatar,
-      memberSince,
-    };
+  // Live data from DB
+  const [profile, setProfile] = useState(null);
+  const [farmerData, setFarmerData] = useState(null);
+  const [stats, setStats] = useState({ crops: 0, orders: 0 });
 
-    const personal = {
-      fullName: 'Kofi Mensah',
-      email: 'kofi.mensah@agrilink.com',
-      phone: '+233 24 451 8891',
-      region: 'Eastern',
-    };
+  // Editable form state
+  const [farmInfo, setFarmInfo] = useState({ farmName: '', bio: '', location: '', primaryCategory: 'vegetables' });
+  const [personalInfo, setPersonalInfo] = useState({ fullName: '', phone: '', region: 'Ashanti' });
+  const [passwords, setPasswords] = useState({ newPassword: '', confirmNewPassword: '' });
+  const [pwError, setPwError] = useState('');
 
-    const account = {
-      verified: profileVerified,
-      memberSince,
-      totalCropsListed: 18,
-      totalOrdersReceived: 64,
-      profileViews: 1260,
-    };
+  // Danger zone
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [showDeleteZone, setShowDeleteZone] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-    return { farm, personal, account };
+  const showToast = useCallback((msg, type = 'success') => {
+    setToast({ msg, type });
+    const t = setTimeout(() => setToast({ msg: '', type: 'success' }), 3200);
+    return () => clearTimeout(t);
   }, []);
 
-  const [toastMsg, setToastMsg] = useState('');
+  // ─── Load real data ───────────────────────────────────────────────────────
+  const loadProfile = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      // 1. Core profile
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-  const [farmInfo, setFarmInfo] = useState({
-    farmName: mock.farm.name,
-    farmDescription: mock.farm.description,
-    farmLocation: mock.farm.location,
-    yearsOfFarming: mock.farm.years,
-    cropSpeciality: mock.farm.cropsSpeciality,
-  });
+      // 2. Farmer-specific details
+      const { data: farmer } = await supabase
+        .from('farmers')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-  const [personalInfo, setPersonalInfo] = useState({
-    fullName: mock.personal.fullName,
-    email: mock.personal.email,
-    phoneNumber: mock.personal.phone,
-    region: mock.personal.region,
-  });
+      // 3. Live stats — crops listed
+      const { count: cropCount } = await supabase
+        .from('crops')
+        .select('id', { count: 'exact', head: true })
+        .eq('farmer_id', user.id);
 
-  const [passwords, setPasswords] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmNewPassword: '',
-  });
+      // 4. Live stats — orders received
+      const { count: orderCount } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('farmer_id', user.id);
 
-  const [coverHover, setCoverHover] = useState(false);
+      setProfile(prof);
+      setFarmerData(farmer);
+      setStats({ crops: cropCount || 0, orders: orderCount || 0 });
 
-  const verified = mock.account.verified;
+      // Seed form state with real values
+      setFarmInfo({
+        farmName: farmer?.farm_name || '',
+        bio: farmer?.farm_bio || '',
+        location: farmer?.farm_location || '',
+        primaryCategory: farmer?.primary_category || 'vegetables',
+      });
+      setPersonalInfo({
+        fullName: prof?.full_name || '',
+        phone: prof?.phone || '',
+        region: farmer?.farm_location?.split(',')?.[1]?.trim() || 'Ashanti',
+      });
+    } catch (err) {
+      console.error('Error loading profile:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
-  function showToast(message) {
-    setToastMsg(message);
-    window.clearTimeout(showToast._t);
-    showToast._t = window.setTimeout(() => setToastMsg(''), 2600);
-  }
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
-  function onSaveFarm(e) {
+  // ─── Save farm info ───────────────────────────────────────────────────────
+  const onSaveFarm = async (e) => {
     e.preventDefault();
-    showToast('Farm information updated.');
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('farmers')
+        .update({
+          farm_name: farmInfo.farmName,
+          farm_bio: farmInfo.bio,
+          farm_location: farmInfo.location,
+          primary_category: farmInfo.primaryCategory,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      showToast('Farm information updated.');
+      loadProfile();
+    } catch (err) {
+      showToast(err.message || 'Failed to save.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Save personal info ───────────────────────────────────────────────────
+  const onSavePersonal = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: personalInfo.fullName, phone: personalInfo.phone })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      showToast('Personal information updated.');
+    } catch (err) {
+      showToast(err.message || 'Failed to save.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Change password ──────────────────────────────────────────────────────
+  const onUpdatePassword = async (e) => {
+    e.preventDefault();
+    setPwError('');
+    if (passwords.newPassword.length < 6) { setPwError('Password must be at least 6 characters.'); return; }
+    if (passwords.newPassword !== passwords.confirmNewPassword) { setPwError('Passwords do not match.'); return; }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passwords.newPassword });
+      if (error) throw error;
+      showToast('Password updated successfully.');
+      setPasswords({ newPassword: '', confirmNewPassword: '' });
+    } catch (err) {
+      showToast(err.message || 'Failed to update password.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Hard delete account ──────────────────────────────────────────────────
+  const onDeleteAccount = async () => {
+    if (deleteConfirm !== 'DELETE') return;
+    setDeleteLoading(true);
+    try {
+      // Delete from profiles (cascades to farmers via FK)
+      await supabase.from('farm_posts').delete().eq('farmer_id', user.id);
+      await supabase.from('crops').delete().eq('farmer_id', user.id);
+      await supabase.from('farmers').delete().eq('id', user.id);
+      await supabase.from('profiles').delete().eq('id', user.id);
+      // Sign out and let Supabase handle auth cleanup
+      await logout();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete account.', 'error');
+      setDeleteLoading(false);
+    }
+  };
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="fp-page fp-loading-state">
+        <Loader2 className="fp-spinner" size={36} />
+        <p>Loading your profile...</p>
+      </div>
+    );
   }
 
-  function onSavePersonal(e) {
-    e.preventDefault();
-    showToast('Personal information updated.');
-  }
-
-  function onUpdatePassword(e) {
-    e.preventDefault();
-    showToast('Password updated successfully.');
-    setPasswords({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
-  }
+  const verified = farmerData?.verification_status === 'verified';
+  const memberSince = profile?.created_at;
 
   return (
     <div className="fp-page">
-      <SuccessToast toast={toastMsg} onClose={() => setToastMsg('')} />
+      <Toast msg={toast.msg} type={toast.type} onClose={() => setToast({ msg: '', type: 'success' })} />
 
       {/* Title */}
       <div className="fp-title-wrap">
-        <div>
-          <h1 className="fp-title">My Profile</h1>
-          <p className="fp-subtitle">Manage your farm and personal information</p>
-        </div>
+        <h1 className="fp-title">My Profile</h1>
+        <p className="fp-subtitle">Manage your farm and personal information</p>
       </div>
 
-      {/* Profile header */}
+      {/* Profile Header */}
       <div className="fp-header-card">
-        <div
-          className={`fp-cover ${coverHover ? 'fp-cover-hover' : ''}`}
-          onMouseEnter={() => setCoverHover(true)}
-          onMouseLeave={() => setCoverHover(false)}
-        >
-          <img className="fp-cover-img" src={mock.farm.coverPhoto} alt="Farm cover" />
-
-          <button className="fp-change-cover-btn" type="button">
-            <ImageIcon size={16} /> Change Cover Photo
-          </button>
-
+        <div className="fp-cover">
+          <img
+            className="fp-cover-img"
+            src="https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=1400&q=70"
+            alt="Farm cover"
+          />
           <div className="fp-cover-grad" />
         </div>
 
         <div className="fp-header-bottom">
           <div className="fp-avatar-block">
             <div className="fp-avatar-wrap">
-              <img className="fp-avatar" src={mock.farm.avatar} alt="Farmer avatar" />
+              <div className="fp-avatar-initials">
+                {(profile?.full_name || user?.name || 'F')
+                  .split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
+              </div>
             </div>
-            <button className="fp-change-photo-btn" type="button">
-              Change Photo
-            </button>
           </div>
 
           <div className="fp-header-meta">
-            <div className="fp-farm-name">{mock.farm.name}</div>
+            <div className="fp-farm-name">{farmerData?.farm_name || 'Your Farm'}</div>
             <div className="fp-meta-row">
-              <div className="fp-meta-item">{mock.farm.location}</div>
+              <div className="fp-meta-item">{farmerData?.farm_location || 'Location not set'}</div>
               <div className="fp-dot" />
-              <div className="fp-meta-item">Member since {formatDate(mock.farm.memberSince)}</div>
+              <div className="fp-meta-item">Member since {formatDate(memberSince)}</div>
             </div>
           </div>
         </div>
@@ -199,63 +275,53 @@ export default function FarmerProfilePage() {
           {/* Farm Information */}
           <div className="fp-card">
             <div className="fp-card-title">Farm Information</div>
-
             <form className="fp-form" onSubmit={onSaveFarm}>
               <Field label="Farm Name">
                 <input
                   className="fp-input"
                   value={farmInfo.farmName}
-                  onChange={(e) => setFarmInfo((s) => ({ ...s, farmName: e.target.value }))}
+                  onChange={e => setFarmInfo(s => ({ ...s, farmName: e.target.value }))}
                   type="text"
                   placeholder="Enter farm name"
                 />
               </Field>
 
-              <Field label="Farm Description">
+              <Field label="Farm Bio / Description">
                 <textarea
                   className="fp-textarea"
-                  value={farmInfo.farmDescription}
-                  onChange={(e) => setFarmInfo((s) => ({ ...s, farmDescription: e.target.value }))}
+                  value={farmInfo.bio}
+                  onChange={e => setFarmInfo(s => ({ ...s, bio: e.target.value }))}
                   rows={4}
-                  placeholder="Tell us about your farm"
+                  placeholder="Tell buyers about your farm, what you grow, and how you farm..."
                 />
               </Field>
 
               <Field label="Farm Location">
                 <input
                   className="fp-input"
-                  value={farmInfo.farmLocation}
-                  onChange={(e) => setFarmInfo((s) => ({ ...s, farmLocation: e.target.value }))}
+                  value={farmInfo.location}
+                  onChange={e => setFarmInfo(s => ({ ...s, location: e.target.value }))}
                   type="text"
-                  placeholder="Enter location"
+                  placeholder="e.g. Kumasi, Ashanti, Ghana"
                 />
               </Field>
 
-              <div className="fp-grid-2">
-                <Field label="Years of Farming">
-                  <input
-                    className="fp-input"
-                    value={farmInfo.yearsOfFarming}
-                    onChange={(e) => setFarmInfo((s) => ({ ...s, yearsOfFarming: Number(e.target.value) }))}
-                    type="number"
-                    min={0}
-                  />
-                </Field>
-
-                <Field label="Crop Speciality">
-                  <input
-                    className="fp-input"
-                    value={farmInfo.cropSpeciality}
-                    onChange={(e) => setFarmInfo((s) => ({ ...s, cropSpeciality: e.target.value }))}
-                    type="text"
-                    placeholder="e.g Maize, Tomatoes, Yam"
-                  />
-                </Field>
-              </div>
+              <Field label="Primary Crop Category">
+                <select
+                  className="fp-select"
+                  value={farmInfo.primaryCategory}
+                  onChange={e => setFarmInfo(s => ({ ...s, primaryCategory: e.target.value }))}
+                >
+                  {['vegetables', 'fruits', 'grains', 'tubers', 'legumes', 'spices'].map(c => (
+                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                  ))}
+                </select>
+              </Field>
 
               <div className="fp-form-actions">
-                <button className="fp-save-btn" type="submit">
-                  <Save size={16} /> Save Changes
+                <button className="fp-save-btn" type="submit" disabled={saving}>
+                  {saving ? <Loader2 size={16} className="fp-spin" /> : <Save size={16} />}
+                  Save Farm Info
                 </button>
               </div>
             </form>
@@ -269,21 +335,27 @@ export default function FarmerProfilePage() {
                 <input
                   className="fp-input"
                   value={personalInfo.fullName}
-                  onChange={(e) => setPersonalInfo((s) => ({ ...s, fullName: e.target.value }))}
+                  onChange={e => setPersonalInfo(s => ({ ...s, fullName: e.target.value }))}
                   type="text"
                 />
               </Field>
 
-              <Field label="Email">
-                <input className="fp-input fp-input-readonly" value={personalInfo.email} readOnly />
+              <Field label="Email Address">
+                <input
+                  className="fp-input fp-input-readonly"
+                  value={user?.email || ''}
+                  readOnly
+                  title="Email cannot be changed here"
+                />
               </Field>
 
               <Field label="Phone Number">
                 <input
                   className="fp-input"
-                  value={personalInfo.phoneNumber}
-                  onChange={(e) => setPersonalInfo((s) => ({ ...s, phoneNumber: e.target.value }))}
+                  value={personalInfo.phone}
+                  onChange={e => setPersonalInfo(s => ({ ...s, phone: e.target.value }))}
                   type="text"
+                  placeholder="+233 ..."
                 />
               </Field>
 
@@ -291,19 +363,16 @@ export default function FarmerProfilePage() {
                 <select
                   className="fp-select"
                   value={personalInfo.region}
-                  onChange={(e) => setPersonalInfo((s) => ({ ...s, region: e.target.value }))}
+                  onChange={e => setPersonalInfo(s => ({ ...s, region: e.target.value }))}
                 >
-                  {GHANA_REGIONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
+                  {GHANA_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </Field>
 
               <div className="fp-form-actions">
-                <button className="fp-save-btn" type="submit">
-                  <Save size={16} /> Save Changes
+                <button className="fp-save-btn" type="submit" disabled={saving}>
+                  {saving ? <Loader2 size={16} className="fp-spin" /> : <Save size={16} />}
+                  Save Personal Info
                 </button>
               </div>
             </form>
@@ -311,34 +380,42 @@ export default function FarmerProfilePage() {
         </div>
 
         <div className="fp-col-right">
-          {/* Account Status */}
+          {/* Account Status — real-time */}
           <div className="fp-card">
             <div className="fp-card-title">Account Status</div>
-
             <div className="fp-status-grid">
               <div className={`fp-verified-badge fp-status-badge ${verified ? 'verified' : 'pending'}`}>
-                <ShieldCheck size={16} /> {verified ? 'Verified' : 'Pending'}
+                <ShieldCheck size={16} /> {verified ? 'Verified' : 'Pending Verification'}
               </div>
 
               <div className="fp-status-line">
                 <span className="fp-status-label">Member Since</span>
-                <span className="fp-status-value">{formatDate(mock.account.memberSince)}</span>
+                <span className="fp-status-value">{formatDate(memberSince)}</span>
               </div>
 
               <div className="fp-status-line">
                 <span className="fp-status-label">Total Crops Listed</span>
-                <span className="fp-status-value">{mock.account.totalCropsListed}</span>
+                <span className="fp-status-value">{stats.crops}</span>
               </div>
 
               <div className="fp-status-line">
-                <span className="fp-status-label">Total Orders Received</span>
-                <span className="fp-status-value">{mock.account.totalOrdersReceived}</span>
+                <span className="fp-status-label">Orders Received</span>
+                <span className="fp-status-value">{stats.orders}</span>
               </div>
 
               <div className="fp-status-line">
-                <span className="fp-status-label">Profile Views</span>
-                <span className="fp-status-value fp-views">
-                  <Eye size={16} /> {mock.account.profileViews.toLocaleString()}
+                <span className="fp-status-label">ID Type</span>
+                <span className="fp-status-value" style={{ textTransform: 'capitalize' }}>
+                  {farmerData?.id_type || '—'}
+                </span>
+              </div>
+
+              <div className="fp-status-line">
+                <span className="fp-status-label">ID Number</span>
+                <span className="fp-status-value">
+                  {farmerData?.id_number
+                    ? `••••${farmerData.id_number.slice(-4)}`
+                    : '—'}
                 </span>
               </div>
             </div>
@@ -347,26 +424,16 @@ export default function FarmerProfilePage() {
           {/* Change Password */}
           <div className="fp-card">
             <div className="fp-card-title">Change Password</div>
-
             <form className="fp-form" onSubmit={onUpdatePassword}>
-              <Field label="Current Password">
-                <input
-                  className="fp-input"
-                  type="password"
-                  value={passwords.currentPassword}
-                  onChange={(e) => setPasswords((s) => ({ ...s, currentPassword: e.target.value }))}
-                  required
-                />
-              </Field>
-
               <Field label="New Password">
                 <input
                   className="fp-input"
                   type="password"
                   value={passwords.newPassword}
-                  onChange={(e) => setPasswords((s) => ({ ...s, newPassword: e.target.value }))}
+                  onChange={e => setPasswords(s => ({ ...s, newPassword: e.target.value }))}
                   required
                   minLength={6}
+                  placeholder="Min. 6 characters"
                 />
               </Field>
 
@@ -375,26 +442,77 @@ export default function FarmerProfilePage() {
                   className="fp-input"
                   type="password"
                   value={passwords.confirmNewPassword}
-                  onChange={(e) =>
-                    setPasswords((s) => ({ ...s, confirmNewPassword: e.target.value }))
-                  }
+                  onChange={e => setPasswords(s => ({ ...s, confirmNewPassword: e.target.value }))}
                   required
                   minLength={6}
+                  placeholder="Repeat new password"
                 />
               </Field>
 
+              {pwError && <div className="fp-pw-error"><AlertTriangle size={14} /> {pwError}</div>}
+
               <div className="fp-form-actions">
-                <button className="fp-save-btn fp-save-btn-alt" type="submit">
+                <button className="fp-save-btn fp-save-btn-alt" type="submit" disabled={saving}>
                   <Lock size={16} /> Update Password
                 </button>
               </div>
-
-              <div className="fp-hint">Use at least 6 characters. This demo stores nothing.</div>
             </form>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="fp-card fp-card-danger">
+            <div className="fp-card-title fp-danger-title">
+              <AlertTriangle size={17} /> Danger Zone
+            </div>
+
+            {!showDeleteZone ? (
+              <div>
+                <p className="fp-danger-desc">
+                  Permanently delete your account. This action cannot be undone — all your farm posts, crops, and orders will be removed.
+                </p>
+                <button
+                  type="button"
+                  className="fp-delete-btn"
+                  onClick={() => setShowDeleteZone(true)}
+                >
+                  Delete My Account
+                </button>
+              </div>
+            ) : (
+              <div className="fp-delete-confirm-zone">
+                <p className="fp-danger-desc">
+                  Type <strong>DELETE</strong> to confirm permanent deletion of your account.
+                </p>
+                <input
+                  className="fp-input fp-delete-input"
+                  type="text"
+                  placeholder='Type DELETE here'
+                  value={deleteConfirm}
+                  onChange={e => setDeleteConfirm(e.target.value)}
+                />
+                <div className="fp-delete-actions">
+                  <button
+                    type="button"
+                    className="fp-cancel-btn"
+                    onClick={() => { setShowDeleteZone(false); setDeleteConfirm(''); }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="fp-delete-btn"
+                    disabled={deleteConfirm !== 'DELETE' || deleteLoading}
+                    onClick={onDeleteAccount}
+                  >
+                    {deleteLoading ? <Loader2 size={15} className="fp-spin" /> : null}
+                    Confirm Delete
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
-

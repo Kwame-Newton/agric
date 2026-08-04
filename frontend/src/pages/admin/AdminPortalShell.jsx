@@ -15,7 +15,7 @@ export function AdminPortalShell({ children }) {
     <div className="admin-app-root">
       <aside className="admin-sidebar">
         <div className="admin-sidebar-brand">
-          <div className="admin-sidebar-emoji">🌱</div>
+          <Leaf size={22} color="#2D6A4F" />
           <div>
             <div className="admin-sidebar-title">AgriLink Admin</div>
           </div>
@@ -24,14 +24,14 @@ export function AdminPortalShell({ children }) {
         <div className="admin-sidebar-divider" />
 
         <nav className="admin-sidebar-nav">
-          <Link to="/admin/dashboard" className="admin-sidebar-link">📊 Dashboard</Link>
-          <Link to="/admin/farmers" className="admin-sidebar-link">👨‍🌾 Farmer Management</Link>
-          <Link to="/admin/buyers" className="admin-sidebar-link">🛒 Buyer Management</Link>
-          <Link to="/admin/crops" className="admin-sidebar-link">🌽 Crop Listings</Link>
-          <Link to="/admin/orders" className="admin-sidebar-link">📦 Orders</Link>
-          <Link to="/admin/verification" className="admin-sidebar-link">✅ Verification Requests</Link>
-          <Link to="/admin/messages" className="admin-sidebar-link">💬 Messages / Reports</Link>
-          <Link to="/admin/settings" className="admin-sidebar-link">⚙️ Settings</Link>
+          <Link to="/admin/dashboard" className="admin-sidebar-link">Dashboard</Link>
+          <Link to="/admin/farmers" className="admin-sidebar-link">Farmer Management</Link>
+          <Link to="/admin/buyers" className="admin-sidebar-link">Buyer Management</Link>
+          <Link to="/admin/crops" className="admin-sidebar-link">Crop Listings</Link>
+          <Link to="/admin/orders" className="admin-sidebar-link">Orders</Link>
+          <Link to="/admin/verification" className="admin-sidebar-link">Verification Requests</Link>
+          <Link to="/admin/messages" className="admin-sidebar-link">Messages / Reports</Link>
+          <Link to="/admin/settings" className="admin-sidebar-link">Settings</Link>
         </nav>
 
         <button className="admin-sidebar-logout" onClick={logoutAdmin}>

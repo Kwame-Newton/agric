@@ -55,42 +55,73 @@ export default function FarmerMyOrdersPage() {
   const fetchFarmerOrders = useCallback(async () => {
     setLoading(true);
     try {
-      let queryBuilder = supabase.from('orders').select('*');
-      if (user?.id) {
-        queryBuilder = queryBuilder.eq('farmer_id', user.id);
+      // 1. Fetch from Supabase
+      let dbOrders = [];
+      try {
+        const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+        if (!error && data) dbOrders = data;
+      } catch (err) {
+        console.warn('Supabase fetch orders error:', err);
       }
-      const { data, error } = await queryBuilder.order('created_at', { ascending: false });
 
-      if (error || !data) {
-        setOrders([]);
-      } else {
-        const formatted = data.map(o => ({
-          id: o.id,
-          order_number: o.order_number || `ORD-${o.id.slice(0, 6)}`,
-          buyer: {
-            name: o.buyer_name || o.phone || 'Marketplace Buyer',
-            email: o.buyer_email || 'N/A',
-            phone: o.phone || 'N/A',
-            deliveryAddress: o.delivery_address || 'N/A',
-          },
-          items: Array.isArray(o.items) && o.items.length > 0 ? o.items : [
-            {
-              name: 'Farm Produce Batch',
-              category: 'Produce',
-              image: 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=300&q=70',
-              unit: 'kg',
-              quantity: 1,
-              unit_price: Number(o.total_amount) || 0
-            }
-          ],
-          totalPrice: Number(o.total_amount) || 0,
-          paymentMethod: o.payment_method || 'Mobile Money',
-          paymentStatus: 'Paid',
-          date: o.created_at ? o.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
-          status: (o.status || 'pending').toLowerCase(),
-        }));
-        setOrders(formatted);
+      // 2. Fetch from LocalStorage
+      let localOrders = [];
+      try {
+        localOrders = JSON.parse(localStorage.getItem('agrilink_orders') || '[]');
+      } catch (err) {
+        console.warn('LocalStorage fetch orders error:', err);
       }
+
+      // 3. Merge unique orders
+      const mergedMap = new Map();
+      [...localOrders, ...dbOrders].forEach(o => {
+        if (!o) return;
+        const key = o.order_number || o.id;
+        if (key && !mergedMap.has(key)) {
+          mergedMap.set(key, o);
+        }
+      });
+
+      const allMerged = Array.from(mergedMap.values());
+
+      // Filter orders relevant to this farmer (or all if farmer_id matches / is unassigned)
+      const farmerId = user?.id;
+      const relevant = allMerged.filter(o => {
+        if (!farmerId) return true;
+        if (o.farmer_id === farmerId) return true;
+        if (Array.isArray(o.items) && o.items.some(item => item.farmer_id === farmerId)) return true;
+        // If farmer_id is null/unassigned, include it for the farmer
+        if (!o.farmer_id) return true;
+        return false;
+      });
+
+      const formatted = relevant.map(o => ({
+        id: o.id || o.order_number,
+        order_number: o.order_number || `ORD-${String(o.id).slice(0, 6)}`,
+        buyer: {
+          name: o.buyer_name || o.buyer?.name || o.phone || 'Marketplace Buyer',
+          email: o.buyer_email || o.buyer?.email || 'N/A',
+          phone: o.phone || o.buyer?.phone || 'N/A',
+          deliveryAddress: o.delivery_address || o.buyer?.deliveryAddress || 'N/A',
+        },
+        items: Array.isArray(o.items) && o.items.length > 0 ? o.items : [
+          {
+            name: 'Farm Produce Batch',
+            category: 'Produce',
+            image: 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=300&q=70',
+            unit: 'kg',
+            quantity: 1,
+            unit_price: Number(o.total_amount) || 0
+          }
+        ],
+        totalPrice: Number(o.total_amount || o.totalPrice) || 0,
+        paymentMethod: o.payment_method || o.paymentMethod || 'Mobile Money',
+        paymentStatus: 'Paid',
+        date: o.created_at ? new Date(o.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+        status: (o.status || 'pending').toLowerCase(),
+      }));
+
+      setOrders(formatted);
     } catch {
       setOrders([]);
     } finally {
@@ -146,6 +177,20 @@ export default function FarmerMyOrdersPage() {
     const normStatus = nextStatus.toLowerCase();
     setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, status: normStatus } : o)));
 
+    // Update in localStorage
+    try {
+      const localOrders = JSON.parse(localStorage.getItem('agrilink_orders') || '[]');
+      const updatedLocal = localOrders.map(o => {
+        if (o.id === orderId || o.order_number === orderId) {
+          return { ...o, status: normStatus };
+        }
+        return o;
+      });
+      localStorage.setItem('agrilink_orders', JSON.stringify(updatedLocal));
+    } catch (e) {
+      console.warn('Error updating local order status:', e);
+    }
+
     try {
       await supabase
         .from('orders')
@@ -183,7 +228,7 @@ export default function FarmerMyOrdersPage() {
       {/* Header */}
       <div className="fm-orders-header">
         <div>
-          <h2 className="fm-orders-title">🌾 My Crop Orders</h2>
+          <h2 className="fm-orders-title">My Crop Orders</h2>
           <div className="fm-orders-subtitle">Track customer orders, manage fulfillment statuses, and view delivery details.</div>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -332,7 +377,7 @@ export default function FarmerMyOrdersPage() {
         </div>
       ) : (
         <div className="fm-orders-empty">
-          <div className="fm-orders-empty-emoji">📦</div>
+          <Package size={48} color="#6b7280" style={{ marginBottom: 12 }} />
           <h3>No matching orders found</h3>
           <p>Try adjusting your search query or status filter.</p>
         </div>

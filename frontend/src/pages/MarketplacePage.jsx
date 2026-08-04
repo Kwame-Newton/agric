@@ -4,34 +4,310 @@ import {
   Search, ChevronDown, ShoppingCart, Star,
   MapPin, X, Filter, Leaf, Heart,
   Plus, Minus, Eye, User, Package, MessageCircle, LogOut,
-  Trash2, CheckCircle2, ArrowRight, ShieldCheck, Truck, CreditCard, Clock, RefreshCw
+  Trash2, CheckCircle2, ArrowRight, ShieldCheck, Truck, CreditCard, Clock, RefreshCw,
+  Settings, Lock, Bell, AlertTriangle, CheckCircle, Loader2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import './MarketplacePage.css';
 
+// ─── Buyer Settings Modal ────────────────────────────────────────────────────
+function BuyerSettingsModal({ user, onClose, onLogout }) {
+  const [activeTab, setActiveTab] = useState('account');
+  const [passwords, setPasswords] = useState({ newPw: '', confirmPw: '' });
+  const [pwError, setPwError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState({ msg: '', type: 'success' });
+
+  // Notification preferences (persisted to localStorage)
+  const [notifs, setNotifs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('agrilink_notif_prefs') || '{"emailOrders":true,"emailPromos":false,"smsUpdates":false}'); }
+    catch { return { emailOrders: true, emailPromos: false, smsUpdates: false }; }
+  });
+
+  // Delete account state
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast({ msg: '', type: 'success' }), 3000);
+  };
+
+  const toggleNotif = (key) => {
+    const updated = { ...notifs, [key]: !notifs[key] };
+    setNotifs(updated);
+    localStorage.setItem('agrilink_notif_prefs', JSON.stringify(updated));
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwError('');
+    if (passwords.newPw.length < 6) { setPwError('Password must be at least 6 characters.'); return; }
+    if (passwords.newPw !== passwords.confirmPw) { setPwError('Passwords do not match.'); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passwords.newPw });
+      if (error) throw error;
+      showToast('Password updated successfully.');
+      setPasswords({ newPw: '', confirmPw: '' });
+    } catch (err) {
+      showToast(err.message || 'Failed to update password.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'DELETE') return;
+    setDeleteLoading(true);
+    try {
+      // Hard-delete buyer data
+      await supabase.from('orders').delete().eq('buyer_id', user.id);
+      await supabase.from('buyers').delete().eq('id', user.id);
+      await supabase.from('profiles').delete().eq('id', user.id);
+      await onLogout();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete account.', 'error');
+      setDeleteLoading(false);
+    }
+  };
+
+  const tabs = [
+    { id: 'account', label: 'Account', icon: User },
+    { id: 'password', label: 'Password', icon: Lock },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'danger', label: 'Delete', icon: AlertTriangle },
+  ];
+
+  return (
+    <div className="bsm-overlay" onClick={onClose}>
+      <div className="bsm-card" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+        {/* Header */}
+        <div className="bsm-header">
+          <div>
+            <div className="bsm-header-title">Account Settings</div>
+            <div className="bsm-header-sub">Manage your buyer account</div>
+          </div>
+          <button className="bsm-close" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </div>
+
+        {/* Tab Bar */}
+        <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', overflowX: 'auto' }}>
+          {tabs.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            const isDanger = tab.id === 'danger';
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  flex: 1, minWidth: 70, padding: '0.85rem 0.5rem', display: 'flex',
+                  flexDirection: 'column', alignItems: 'center', gap: '0.25rem',
+                  fontSize: '0.78rem', fontWeight: 800,
+                  color: isActive ? (isDanger ? '#dc2626' : '#2D6A4F') : '#9ca3af',
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  borderBottom: isActive ? `2.5px solid ${isDanger ? '#dc2626' : '#2D6A4F'}` : '2.5px solid transparent',
+                  transition: 'color 0.15s',
+                }}
+              >
+                <Icon size={17} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="bsm-body">
+          {/* Toast */}
+          {toast.msg && (
+            <div className={`bsm-toast bsm-toast-${toast.type}`}>
+              {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+              {toast.msg}
+            </div>
+          )}
+
+          {/* ── Account Tab ── */}
+          {activeTab === 'account' && (
+            <div>
+              <div className="bsm-section-title">Account Info</div>
+              <div className="bsm-info-row">
+                <span className="bsm-info-label">Full Name</span>
+                <span className="bsm-info-val">{user?.name || '—'}</span>
+              </div>
+              <div className="bsm-info-row">
+                <span className="bsm-info-label">Email</span>
+                <span className="bsm-info-val">{user?.email || '—'}</span>
+              </div>
+              <div className="bsm-info-row">
+                <span className="bsm-info-label">Phone</span>
+                <span className="bsm-info-val">{user?.phone || '—'}</span>
+              </div>
+              <div className="bsm-info-row">
+                <span className="bsm-info-label">Role</span>
+                <span className="bsm-info-val" style={{ textTransform: 'capitalize' }}>{user?.role || 'buyer'}</span>
+              </div>
+              <div className="bsm-info-row">
+                <span className="bsm-info-label">Member Since</span>
+                <span className="bsm-info-val">
+                  {user?.loginTime ? new Date(user.loginTime).toLocaleDateString(undefined, { year: 'numeric', month: 'short' }) : '—'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Password Tab ── */}
+          {activeTab === 'password' && (
+            <form onSubmit={handleChangePassword}>
+              <div className="bsm-section-title">Change Password</div>
+              <div className="bsm-field">
+                <label className="bsm-label">New Password</label>
+                <input
+                  className="bsm-input"
+                  type="password"
+                  placeholder="Min. 6 characters"
+                  value={passwords.newPw}
+                  onChange={e => setPasswords(s => ({ ...s, newPw: e.target.value }))}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="bsm-field">
+                <label className="bsm-label">Confirm New Password</label>
+                <input
+                  className="bsm-input"
+                  type="password"
+                  placeholder="Repeat new password"
+                  value={passwords.confirmPw}
+                  onChange={e => setPasswords(s => ({ ...s, confirmPw: e.target.value }))}
+                  required
+                  minLength={6}
+                />
+              </div>
+              {pwError && <div className="bsm-error"><AlertTriangle size={14} /> {pwError}</div>}
+              <button
+                type="submit"
+                className="bsm-btn bsm-btn-primary"
+                style={{ marginTop: '0.5rem', width: '100%' }}
+                disabled={saving}
+              >
+                {saving ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Lock size={15} />}
+                Update Password
+              </button>
+            </form>
+          )}
+
+          {/* ── Notifications Tab ── */}
+          {activeTab === 'notifications' && (
+            <div>
+              <div className="bsm-section-title">Notification Preferences</div>
+              {[
+                { key: 'emailOrders', label: 'Order Confirmations', sub: 'Get notified when your orders are confirmed' },
+                { key: 'emailPromos', label: 'Promotions & Deals', sub: 'Receive weekly deals from farmers' },
+                { key: 'smsUpdates', label: 'SMS Delivery Updates', sub: 'Text updates when your order is on the way' },
+              ].map(n => (
+                <div key={n.key} className="bsm-toggle-row">
+                  <div>
+                    <div className="bsm-toggle-label">{n.label}</div>
+                    <div className="bsm-toggle-sub">{n.sub}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className={`bsm-toggle-switch ${notifs[n.key] ? 'on' : ''}`}
+                    onClick={() => toggleNotif(n.key)}
+                    aria-label={`Toggle ${n.label}`}
+                  >
+                    <span className="bsm-toggle-knob" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Danger Zone Tab ── */}
+          {activeTab === 'danger' && (
+            <div>
+              <div className="bsm-section-title">Danger Zone</div>
+              <div className="bsm-danger-box">
+                <div className="bsm-danger-title">
+                  <AlertTriangle size={15} /> Delete Account
+                </div>
+                <div className="bsm-danger-desc">
+                  Permanently delete your buyer account. All your order history and account data will be erased. This action cannot be undone.
+                </div>
+                {!showDelete ? (
+                  <button
+                    type="button"
+                    className="bsm-btn bsm-btn-danger"
+                    onClick={() => setShowDelete(true)}
+                  >
+                    Delete My Account
+                  </button>
+                ) : (
+                  <div className="bsm-delete-confirm-row">
+                    <div style={{ fontSize: '0.85rem', color: '#9b1c1c', fontWeight: 700 }}>
+                      Type <strong>DELETE</strong> to confirm:
+                    </div>
+                    <input
+                      className="bsm-input"
+                      style={{ borderColor: 'rgba(220,38,38,0.4)' }}
+                      placeholder="Type DELETE here"
+                      value={deleteConfirm}
+                      onChange={e => setDeleteConfirm(e.target.value)}
+                    />
+                    <div className="bsm-delete-actions">
+                      <button
+                        type="button"
+                        className="bsm-btn bsm-btn-ghost"
+                        onClick={() => { setShowDelete(false); setDeleteConfirm(''); }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="bsm-btn bsm-btn-danger"
+                        disabled={deleteConfirm !== 'DELETE' || deleteLoading}
+                        onClick={handleDeleteAccount}
+                      >
+                        {deleteLoading ? <Loader2 size={14} /> : null}
+                        Confirm Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Mock Fallback Data ─────────────────────────────────────────────────────
 const allProducts = [
   {
-    id: 'demo-1', name: 'Fresh Tomatoes', farm: 'Green Valley Farms', location: 'Kumasi, Ashanti',
+    id: 'demo-1', name: 'Fresh Tomatoes', farm: 'Green Valley Farms', location: 'Kumasi, Ashanti', farmer_id: 'farmer-1',
     price: 12, unit: 'kg', category: 'vegetables', rating: 4.8, reviews: 319,
     image: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: 'Best Seller', description: 'Fresh, organic greenhouse tomatoes harvested daily.'
   },
   {
-    id: 'demo-2', name: 'Red Pepper', farm: 'Ama Organic Farm', location: 'Ejisu, Ashanti',
+    id: 'demo-2', name: 'Red Pepper', farm: 'Ama Organic Farm', location: 'Ejisu, Ashanti', farmer_id: 'farmer-2',
     price: 15, unit: 'kg', category: 'vegetables', rating: 4.7, reviews: 196,
     image: 'https://images.unsplash.com/photo-1562967916-eb82221dfb35?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: '', description: 'Spicy, vibrant red peppers carefully sorted.'
   },
   {
-    id: 'demo-3', name: 'Fresh Maize', farm: 'Happy Farm', location: 'Ejisu, Ashanti',
+    id: 'demo-3', name: 'Fresh Maize', farm: 'Happy Farm', location: 'Ejisu, Ashanti', farmer_id: 'farmer-3',
     price: 8, unit: 'kg', category: 'grains', rating: 4.4, reviews: 110,
     image: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: '', description: 'Sweet corn maize freshly harvested from Ejisu fields.'
   },
   {
-    id: 'demo-4', name: 'Cassava', farm: 'Nkompong Farm', location: 'Kumasi, Ashanti',
+    id: 'demo-4', name: 'Cassava', farm: 'Nkompong Farm', location: 'Kumasi, Ashanti', farmer_id: 'farmer-4',
     price: 6, unit: 'kg', category: 'tubers', rating: 4.5, reviews: 98,
     image: 'https://images.unsplash.com/photo-1524592412331-4fe04e37381d?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: '', description: 'High-yield fresh cassava roots ideal for local markets.'
@@ -39,12 +315,12 @@ const allProducts = [
 ];
 
 const categories = [
-  { id: 'all', label: 'All Categories', icon: '🛒' },
-  { id: 'vegetables', label: 'Vegetables', icon: '🥦' },
-  { id: 'fruits', label: 'Fruits', icon: '🍊' },
-  { id: 'grains', label: 'Grains', icon: '🌾' },
-  { id: 'tubers', label: 'Tubers', icon: '🥔' },
-  { id: 'spices', label: 'Spices', icon: '🌶️' },
+  { id: 'all', label: 'All Categories' },
+  { id: 'vegetables', label: 'Vegetables' },
+  { id: 'fruits', label: 'Fruits' },
+  { id: 'grains', label: 'Grains' },
+  { id: 'tubers', label: 'Tubers' },
+  { id: 'spices', label: 'Spices' },
 ];
 
 const sortOptions = [
@@ -268,6 +544,8 @@ function CartDrawer({ open, onClose, cart, crops, onCartChange, onClearCart, use
     setIsSubmitting(true);
     try {
       const orderNum = `#ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+      const targetFarmerId = cartItems.find(i => i.farmer_id)?.farmer_id || user?.id || null;
+
       const orderItems = cartItems.map(item => ({
         id: item.id,
         name: item.name,
@@ -276,13 +554,14 @@ function CartDrawer({ open, onClose, cart, crops, onCartChange, onClearCart, use
         qty: item.qty,
         farm: item.farm,
         image: item.image,
+        farmer_id: item.farmer_id || targetFarmerId,
       }));
 
       const newOrderObj = {
         id: `ord-${Date.now()}`,
         order_number: orderNum,
         buyer_id: user?.id || 'guest',
-        farmer_id: cartItems[0]?.farmer_id || null,
+        farmer_id: targetFarmerId,
         items: orderItems,
         total_amount: grandTotal,
         delivery_address: deliveryAddress,
@@ -292,21 +571,21 @@ function CartDrawer({ open, onClose, cart, crops, onCartChange, onClearCart, use
         created_at: new Date().toISOString(),
       };
 
-      // Try saving to Supabase orders table
-      try {
-        await supabase.from('orders').insert({
-          order_number: orderNum,
-          buyer_id: user?.id,
-          farmer_id: cartItems[0]?.farmer_id || null,
-          items: orderItems,
-          total_amount: grandTotal,
-          delivery_address: deliveryAddress,
-          phone,
-          payment_method: paymentMethod,
-          status: 'pending',
-        });
-      } catch (err) {
-        console.warn('Supabase orders save error:', err);
+      // Save to Supabase orders table
+      const { error: insertError } = await supabase.from('orders').insert({
+        order_number: orderNum,
+        buyer_id: user?.id,
+        farmer_id: targetFarmerId,
+        items: orderItems,
+        total_amount: grandTotal,
+        delivery_address: deliveryAddress,
+        phone,
+        payment_method: paymentMethod,
+        status: 'pending',
+      });
+
+      if (insertError) {
+        console.warn('Supabase orders save error:', insertError.message);
       }
 
       // Also save to localStorage for permanent persistence
@@ -700,6 +979,7 @@ export default function MarketplacePage() {
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [placedOrdersList, setPlacedOrdersList] = useState([]);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
@@ -822,6 +1102,16 @@ export default function MarketplacePage() {
             <span>AgriLink</span>
           </Link>
 
+          {/* Center Tabs: Marketplace & Farm Blog */}
+          <div className="mp-tabs-center" style={{ display: 'flex', alignItems: 'center', background: '#f3f4f6', padding: '4px', borderRadius: '30px', gap: '4px', margin: '0 12px' }}>
+            <Link to="/marketplace" style={{ padding: '7px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none', background: '#2D6A4F', color: '#ffffff', boxShadow: '0 2px 6px rgba(45,106,79,0.3)' }}>
+              Marketplace
+            </Link>
+            <Link to="/blog" style={{ padding: '7px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none', background: '#ffffff', color: '#6b7280' }}>
+              Farm Blog
+            </Link>
+          </div>
+
           {/* Search */}
           <div className="mp-search-wrap">
             <Search className="mp-search-icon" size={18} />
@@ -871,6 +1161,14 @@ export default function MarketplacePage() {
                   >
                     <Package size={18} className="mp-avatar-dropdown-item-icon" />
                     <span>My Orders</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="mp-avatar-dropdown-item"
+                    onClick={() => { setAvatarMenuOpen(false); setIsSettingsOpen(true); }}
+                  >
+                    <Settings size={18} className="mp-avatar-dropdown-item-icon" />
+                    <span>Settings</span>
                   </button>
                   <button
                     type="button"
@@ -1033,6 +1331,15 @@ export default function MarketplacePage() {
         user={user}
         newOrders={placedOrdersList}
       />
+
+      {/* 4. Buyer Settings Modal */}
+      {isSettingsOpen && (
+        <BuyerSettingsModal
+          user={user}
+          onClose={() => setIsSettingsOpen(false)}
+          onLogout={handleLogout}
+        />
+      )}
     </div>
   );
 }

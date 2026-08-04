@@ -17,9 +17,8 @@ import FarmerMessagesPage from './pages/FarmerMessagesPage';
 import FarmerSettingsPage from './pages/FarmerSettingsPage';
 import MarketplacePage from './pages/MarketplacePage';
 import ContactPage from './pages/ContactPage';
-
-
-
+import FarmBlogFeedPage from './pages/FarmBlogFeedPage';
+import FarmerPublicProfilePage from './pages/FarmerPublicProfilePage';
 
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -114,13 +113,31 @@ function App() {
 
 
           {/* Marketplace - Protected, buyers only */}
-
-
           <Route
             path="/marketplace"
             element={
               <ProtectedRoute requiredRole="buyer">
                 <MarketplacePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Farm Blog Feed - Protected, buyers only */}
+          <Route
+            path="/blog"
+            element={
+              <ProtectedRoute requiredRole="buyer">
+                <FarmBlogFeedPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Farmer Public Profile */}
+          <Route
+            path="/farmers/:id"
+            element={
+              <ProtectedRoute requiredRole="buyer">
+                <FarmerPublicProfilePage />
               </ProtectedRoute>
             }
           />

@@ -1,91 +1,38 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Search, X, Eye, Download, ChevronLeft, ChevronRight,
-  Package, Clock, CheckCircle2, AlertCircle, XCircle, RefreshCw,
-  User, Truck, DollarSign, Filter, Phone, MapPin, Calendar, CreditCard,
-  Sprout, ShoppingBag, ArrowUpRight, Check, TrendingUp, ShieldCheck
+  Package, Clock, CheckCircle2, XCircle, RefreshCw,
+  User, Truck, DollarSign, Phone, MapPin, Calendar,
+  Sprout, ShoppingBag, Check, TrendingUp, ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { AdminDashboardLayout } from './AdminDashboardPage';
-import './admin.css';
+import './AdminOrders.css';
 
+/* ──────────────────────────────────────────────────────────
+   Status Badge Component
+────────────────────────────────────────────────────────── */
 function OrderStatusBadge({ status }) {
   const norm = (status || 'pending').toLowerCase();
   const map = {
-    pending:    { label: 'Pending',    bg: '#fff7ed', color: '#c2410c', border: '#ffedd5', icon: Clock },
-    processing: { label: 'Processing', bg: '#eff6ff', color: '#1d4ed8', border: '#dbeafe', icon: RefreshCw },
-    delivered:  { label: 'Delivered',  bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: CheckCircle2 },
-    cancelled:  { label: 'Cancelled',  bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', icon: XCircle },
+    pending:    { label: 'Pending',    cls: 'ao-status ao-status-pending',    icon: Clock },
+    processing: { label: 'Processing', cls: 'ao-status ao-status-processing', icon: RefreshCw },
+    delivered:  { label: 'Delivered',  cls: 'ao-status ao-status-delivered',  icon: CheckCircle2 },
+    cancelled:  { label: 'Cancelled',  cls: 'ao-status ao-status-cancelled',  icon: XCircle },
   };
-  const cfg = map[norm] || { label: status, bg: '#f3f4f6', color: '#374151', border: '#e5e7eb', icon: Clock };
+  const cfg = map[norm] || { label: status, cls: 'ao-status ao-status-pending', icon: Clock };
   const Icon = cfg.icon;
 
   return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '5px',
-      padding: '4px 10px',
-      borderRadius: '20px',
-      fontSize: '0.78rem',
-      fontWeight: 700,
-      backgroundColor: cfg.bg,
-      color: cfg.color,
-      border: `1px solid ${cfg.border}`,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-    }}>
-      <Icon size={13} className={norm === 'processing' ? 'spin' : ''} />
+    <span className={cfg.cls}>
+      <Icon size={13} className={norm === 'processing' ? 'ao-spin' : ''} />
       {cfg.label}
     </span>
   );
 }
 
-function StatCard({ title, value, subtext, icon: Icon, colorGradient, borderAccent }) {
-  return (
-    <div style={{
-      background: '#ffffff',
-      borderRadius: '16px',
-      padding: '1.25rem 1.5rem',
-      border: '1px solid #e8ede9',
-      borderTop: `4px solid ${borderAccent}`,
-      boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
-      display: 'flex',
-      alignItems: 'center',
-      justify: 'space-between',
-      transition: 'all 0.2s ease-in-out',
-    }}>
-      <div>
-        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          {title}
-        </div>
-        <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', marginTop: '4px', letterSpacing: '-0.02em' }}>
-          {value}
-        </div>
-        {subtext && (
-          <div style={{ fontSize: '0.8rem', color: '#4b5563', marginTop: '4px', fontWeight: 600 }}>
-            {subtext}
-          </div>
-        )}
-      </div>
-      <div style={{
-        width: '48px',
-        height: '48px',
-        borderRadius: '14px',
-        background: colorGradient,
-        display: 'flex',
-        alignItems: 'center',
-        justify: 'center',
-        color: '#ffffff',
-        boxShadow: '0 6px 16px rgba(0,0,0,0.08)'
-      }}>
-        <Icon size={22} />
-      </div>
-    </div>
-  );
-}
-
 /* ──────────────────────────────────────────────────────────
-   Admin Order Detail Modal
+   Order Detail Modal
 ────────────────────────────────────────────────────────── */
 function OrderDetailModal({ order, open, onClose, onUpdateStatus }) {
   if (!order || !open) return null;
@@ -95,86 +42,44 @@ function OrderDetailModal({ order, open, onClose, onUpdateStatus }) {
   const isCancelled = currentStatus === 'cancelled';
 
   return (
-    <div className="fm-modal-overlay" onClick={onClose}>
-      <div className="fm-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 760, borderRadius: '20px', overflow: 'hidden' }}>
+    <div className="ao-modal-overlay" onClick={onClose}>
+      <div className="ao-modal" onClick={e => e.stopPropagation()}>
+
         {/* Header */}
-        <div style={{
-          background: 'linear-gradient(135deg, #0f2d1d 0%, #1e5c3b 100%)',
-          padding: '1.5rem 1.75rem',
-          color: '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justify: 'space-between'
-        }}>
+        <div className="ao-modal-header">
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800 }}>
-                {order.order_number}
-              </span>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#fff' }}>Order Overview</h3>
+              <span className="ao-modal-order-tag">{order.order_number}</span>
+              <h3 className="ao-modal-title">Order Overview</h3>
             </div>
-            <div style={{ fontSize: '0.83rem', color: '#a7f3d0', marginTop: '4px' }}>
+            <div className="ao-modal-date">
               Placed on {new Date(order.created_at).toLocaleString()}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'rgba(255,255,255,0.15)',
-              border: 'none',
-              borderRadius: '50%',
-              width: '34px',
-              height: '34px',
-              display: 'flex',
-              alignItems: 'center',
-              justify: 'center',
-              color: '#fff',
-              cursor: 'pointer'
-            }}
-          >
+          <button className="ao-modal-close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
 
-        <div style={{ padding: '1.5rem', maxHeight: '75vh', overflowY: 'auto' }}>
-          {/* Timeline Progress */}
+        {/* Body */}
+        <div className="ao-modal-body">
+
+          {/* Timeline or Cancelled */}
           {!isCancelled ? (
-            <div style={{
-              background: '#f8faf9',
-              border: '1px solid #e1e8e4',
-              borderRadius: '14px',
-              padding: '1.25rem',
-              marginBottom: '1.25rem'
-            }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4b5563', marginBottom: '1rem', textTransform: 'uppercase' }}>
-                Fulfillment Progress
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+            <div className="ao-timeline-card">
+              <div className="ao-timeline-label">Fulfillment Progress</div>
+              <div className="ao-timeline-steps">
                 {steps.map((step, idx) => {
                   const stepIndex = steps.indexOf(currentStatus);
                   const isDone = stepIndex >= idx;
                   const isCurrent = step === currentStatus;
 
                   return (
-                    <div key={step} style={{ flex: 1, textAlign: 'center', position: 'relative', zIndex: 2 }}>
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: isDone ? '#1e5c3b' : '#e5e7eb',
-                        color: isDone ? '#fff' : '#6b7280',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justify: 'center',
-                        margin: '0 auto 6px',
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        boxShadow: isCurrent ? '0 0 0 4px rgba(30,92,59,0.2)' : 'none'
-                      }}>
+                    <div key={step} className="ao-timeline-step">
+                      <div className={`ao-timeline-dot ${isDone ? (isCurrent ? 'current' : 'done') : 'pending'}`}>
                         {isDone ? <Check size={16} /> : idx + 1}
                       </div>
-                      <div style={{ fontSize: '0.78rem', fontWeight: isDone ? 800 : 500, color: isDone ? '#111827' : '#9ca3af', textTransform: 'capitalize' }}>
+                      <div className={`ao-timeline-step-label ${isDone ? 'done' : 'pending'}`}>
                         {step}
                       </div>
                     </div>
@@ -183,56 +88,25 @@ function OrderDetailModal({ order, open, onClose, onUpdateStatus }) {
               </div>
             </div>
           ) : (
-            <div style={{
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-              borderRadius: '14px',
-              padding: '1rem 1.25rem',
-              marginBottom: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              color: '#991b1b',
-              fontWeight: 700,
-              fontSize: '0.9rem'
-            }}>
+            <div className="ao-cancelled-banner">
               <XCircle size={20} />
               This order has been cancelled.
             </div>
           )}
 
-          {/* Quick Action Status Bar */}
-          <div style={{
-            background: '#ffffff',
-            border: '1.5px solid #1e5c3b',
-            borderRadius: '14px',
-            padding: '1rem 1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justify: 'space-between',
-            marginBottom: '1.25rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Update Status Bar */}
+          <div className="ao-status-bar">
+            <div className="ao-status-bar-info">
               <ShieldCheck size={20} color="#1e5c3b" />
               <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#111827' }}>Update Order Status</div>
-                <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>Changes update instantly in real-time.</div>
+                <div className="ao-status-bar-title">Update Order Status</div>
+                <div className="ao-status-bar-sub">Changes update instantly in real-time.</div>
               </div>
             </div>
             <select
+              className="ao-status-select"
               value={currentStatus}
               onChange={(e) => onUpdateStatus(order.id, e.target.value)}
-              style={{
-                padding: '8px 14px',
-                borderRadius: '10px',
-                border: '1.5px solid #1e5c3b',
-                background: '#f0faf4',
-                color: '#1e5c3b',
-                fontWeight: 800,
-                fontSize: '0.88rem',
-                cursor: 'pointer',
-                outline: 'none'
-              }}
             >
               <option value="pending">Pending</option>
               <option value="processing">Processing</option>
@@ -241,72 +115,87 @@ function OrderDetailModal({ order, open, onClose, onUpdateStatus }) {
             </select>
           </div>
 
-          {/* Customer & Supplier Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
-            {/* Buyer Card */}
-            <div style={{ background: '#ffffff', border: '1px solid #e8ede9', borderRadius: '14px', padding: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e5c3b', fontWeight: 800, fontSize: '0.92rem', marginBottom: '0.85rem' }}>
-                <User size={18} /> Buyer Details
+          {/* Info Grid */}
+          <div className="ao-info-grid">
+            {/* Buyer */}
+            <div className="ao-info-card">
+              <div className="ao-info-card-title">
+                <User size={17} /> Buyer Details
               </div>
-              <div style={{ fontSize: '0.86rem', display: 'flex', flexDirection: 'column', gap: '8px', color: '#374151' }}>
-                <div><span style={{ color: '#6b7280' }}>Name:</span> <strong>{order.buyer_name || 'Customer'}</strong></div>
-                <div><span style={{ color: '#6b7280' }}>Email:</span> <strong>{order.buyer_email || 'N/A'}</strong></div>
-                <div><span style={{ color: '#6b7280' }}>Phone:</span> <strong>{order.phone || 'N/A'}</strong></div>
-                <div><span style={{ color: '#6b7280' }}>Delivery:</span> <strong>{order.delivery_address || 'N/A'}</strong></div>
+              <div className="ao-info-row">
+                <span className="ao-info-label">Name:</span>
+                <span className="ao-info-value">{order.buyer_name || 'Customer'}</span>
+              </div>
+              <div className="ao-info-row">
+                <span className="ao-info-label">Email:</span>
+                <span className="ao-info-value">{order.buyer_email || 'N/A'}</span>
+              </div>
+              <div className="ao-info-row">
+                <span className="ao-info-label">Phone:</span>
+                <span className="ao-info-value">{order.phone || 'N/A'}</span>
+              </div>
+              <div className="ao-info-row">
+                <span className="ao-info-label">Address:</span>
+                <span className="ao-info-value">{order.delivery_address || 'N/A'}</span>
               </div>
             </div>
 
-            {/* Farmer Card */}
-            <div style={{ background: '#ffffff', border: '1px solid #e8ede9', borderRadius: '14px', padding: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e5c3b', fontWeight: 800, fontSize: '0.92rem', marginBottom: '0.85rem' }}>
-                <Sprout size={18} /> Supplier & Payment
+            {/* Supplier */}
+            <div className="ao-info-card">
+              <div className="ao-info-card-title">
+                <Sprout size={17} /> Supplier &amp; Payment
               </div>
-              <div style={{ fontSize: '0.86rem', display: 'flex', flexDirection: 'column', gap: '8px', color: '#374151' }}>
-                <div><span style={{ color: '#6b7280' }}>Farmer:</span> <strong>{order.farmer_name || 'AgriLink Partner'}</strong></div>
-                <div><span style={{ color: '#6b7280' }}>Method:</span> <strong>{order.payment_method || 'Mobile Money'}</strong></div>
-                <div>
-                  <span style={{ color: '#6b7280' }}>Status:</span>{' '}
-                  <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '6px', fontWeight: 800, fontSize: '0.78rem' }}>
+              <div className="ao-info-row">
+                <span className="ao-info-label">Farmer:</span>
+                <span className="ao-info-value">{order.farmer_name || 'AgriLink Partner'}</span>
+              </div>
+              <div className="ao-info-row">
+                <span className="ao-info-label">Method:</span>
+                <span className="ao-info-value">{order.payment_method || 'Mobile Money'}</span>
+              </div>
+              <div className="ao-info-row">
+                <span className="ao-info-label">Status:</span>
+                <span className="ao-info-value">
+                  <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '6px', fontWeight: 800, fontSize: '0.76rem' }}>
                     {order.payment_status || 'Paid'}
                   </span>
-                </div>
-                <div>
-                  <span style={{ color: '#6b7280' }}>Total:</span>{' '}
-                  <span style={{ color: '#15803d', fontSize: '1.05rem', fontWeight: 900 }}>GH₵ {order.total_amount}</span>
-                </div>
+                </span>
+              </div>
+              <div className="ao-info-row">
+                <span className="ao-info-label">Total:</span>
+                <span className="ao-info-value" style={{ color: '#15803d', fontSize: '1.05rem', fontWeight: 900 }}>
+                  GH₵ {Number(order.total_amount).toFixed(2)}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Items Summary */}
-          <div style={{ border: '1px solid #e8ede9', borderRadius: '14px', overflow: 'hidden' }}>
-            <div style={{ background: '#f9fafb', padding: '0.85rem 1.25rem', fontWeight: 800, color: '#111827', fontSize: '0.88rem', borderBottom: '1px solid #e8ede9' }}>
+          {/* Items */}
+          <div className="ao-items-card">
+            <div className="ao-items-header">
+              <ShoppingBag size={15} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />
               Order Items ({order.items?.length || 0})
             </div>
-            <div style={{ padding: '0.5rem 1.25rem' }}>
+            <div className="ao-items-list">
               {(order.items || []).map((item, i) => (
-                <div key={i} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justify: 'space-between',
-                  padding: '0.75rem 0',
-                  borderBottom: i === (order.items.length - 1) ? 'none' : '1px solid #f3f4f6'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div key={i} className="ao-item-row">
+                  <div className="ao-item-left">
                     <img
-                      src={item.image_url || 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=150&q=70'}
+                      src={item.image || item.image_url || 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=150&q=70'}
                       alt={item.name}
-                      style={{ width: '46px', height: '46px', borderRadius: '10px', objectFit: 'cover' }}
+                      className="ao-item-img"
                     />
                     <div>
-                      <div style={{ fontWeight: 800, color: '#111827' }}>{item.name}</div>
-                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{item.category || 'Produce'}</div>
+                      <div className="ao-item-name">{item.name}</div>
+                      <div className="ao-item-category">{item.category || item.farm || 'Produce'}</div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, color: '#111827' }}>{item.quantity} {item.unit || 'kg'}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: 700 }}>
-                      GH₵ {item.unit_price ? (item.unit_price * item.quantity) : order.total_amount}
+                    <div className="ao-item-qty">
+                      {item.qty || item.quantity || 1} {item.unit || 'kg'}
+                    </div>
+                    <div className="ao-item-price">
+                      GH₵ {(item.price * (item.qty || item.quantity || 1)).toFixed(2)}
                     </div>
                   </div>
                 </div>
@@ -316,26 +205,8 @@ function OrderDetailModal({ order, open, onClose, onUpdateStatus }) {
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '1rem 1.5rem',
-          borderTop: '1px solid #e8ede9',
-          background: '#f9fafb',
-          display: 'flex',
-          justify: 'flex-end'
-        }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: '0.65rem 1.4rem',
-              borderRadius: '999px',
-              border: '1px solid #d1d5db',
-              background: '#ffffff',
-              fontWeight: 800,
-              color: '#374151',
-              cursor: 'pointer'
-            }}
-          >
+        <div className="ao-modal-footer">
+          <button className="ao-close-btn" onClick={onClose}>
             Close Overview
           </button>
         </div>
@@ -345,7 +216,22 @@ function OrderDetailModal({ order, open, onClose, onUpdateStatus }) {
 }
 
 /* ──────────────────────────────────────────────────────────
-   Main Admin Orders Page Component
+   Loading Skeleton Row
+────────────────────────────────────────────────────────── */
+function SkeletonRow() {
+  return (
+    <tr className="ao-skeleton-row">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <td key={i}>
+          <div className="ao-skeleton-bar" style={{ width: i === 0 ? '100px' : i === 7 ? '80px' : `${60 + Math.random() * 60}px` }} />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────
+   Main Admin Orders Page
 ────────────────────────────────────────────────────────── */
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -366,6 +252,7 @@ export default function AdminOrdersPage() {
         .order('created_at', { ascending: false });
 
       if (error || !data) {
+        console.warn('Orders fetch error:', error?.message);
         setOrders([]);
       } else {
         const formatted = data.map(o => ({
@@ -411,7 +298,7 @@ export default function AdminOrdersPage() {
         .update({ status: norm })
         .eq('id', orderId);
     } catch {
-      // Local state kept
+      // Optimistic local state kept
     }
   };
 
@@ -465,126 +352,75 @@ export default function AdminOrdersPage() {
 
   return (
     <AdminDashboardLayout>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', fontFamily: "'Inter', sans-serif" }}>
+      <div className="ao-page">
 
-        {/* Hero Banner Header */}
-        <div style={{
-          background: 'linear-gradient(135deg, #0f2d1d 0%, #1e5c3b 100%)',
-          borderRadius: '20px',
-          padding: '2rem 2.25rem',
-          color: '#ffffff',
-          boxShadow: '0 10px 30px rgba(15, 45, 29, 0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          justify: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1.5rem'
-        }}>
-          <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+        {/* ── Hero Banner ────────────────────────────────────── */}
+        <div className="ao-hero">
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div className="ao-hero-tag">
               <ShieldCheck size={14} /> Control Center
             </div>
-            <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em' }}>
-              Order Management
-            </h1>
-            <p style={{ margin: '0.35rem 0 0', color: '#a7f3d0', fontSize: '0.95rem' }}>
-              Monitor platform-wide crop orders, dispatch progress, and revenue fulfillment.
-            </p>
+            <h1>Order Management</h1>
+            <p>Monitor platform-wide crop orders, dispatch progress, and revenue fulfillment.</p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <button
-              onClick={fetchOrders}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '0.65rem 1.1rem',
-                borderRadius: '999px',
-                border: '1px solid rgba(255,255,255,0.3)',
-                background: 'rgba(255,255,255,0.1)',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '0.88rem',
-                cursor: 'pointer',
-                backdropFilter: 'blur(4px)'
-              }}
-            >
-              <RefreshCw size={15} className={loading ? 'spin' : ''} /> Refresh
+          <div className="ao-hero-actions">
+            <button className="ao-btn-ghost" onClick={fetchOrders}>
+              <RefreshCw size={15} className={loading ? 'ao-spin' : ''} /> Refresh
             </button>
-            <button
-              onClick={exportCSV}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '0.65rem 1.25rem',
-                borderRadius: '999px',
-                border: 'none',
-                background: '#ffffff',
-                color: '#1e5c3b',
-                fontWeight: 800,
-                fontSize: '0.88rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.12)'
-              }}
-            >
+            <button className="ao-btn-solid" onClick={exportCSV}>
               <Download size={15} /> Export CSV
             </button>
           </div>
         </div>
 
-        {/* 4 Stat Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.25rem' }}>
-          <StatCard
-            title="Total Platform Revenue"
-            value={`GH₵ ${stats.totalRev.toLocaleString()}`}
-            subtext={`${stats.total} total orders placed`}
-            icon={TrendingUp}
-            colorGradient="linear-gradient(135deg, #059669, #10b981)"
-            borderAccent="#059669"
-          />
-          <StatCard
-            title="Pending Orders"
-            value={stats.pending}
-            subtext="Needs farmer response"
-            icon={Clock}
-            colorGradient="linear-gradient(135deg, #d97706, #f59e0b)"
-            borderAccent="#d97706"
-          />
-          <StatCard
-            title="In Processing / Transit"
-            value={stats.processing}
-            subtext="Fulfillment in progress"
-            icon={Truck}
-            colorGradient="linear-gradient(135deg, #2563eb, #3b82f6)"
-            borderAccent="#2563eb"
-          />
-          <StatCard
-            title="Completed Deliveries"
-            value={stats.delivered}
-            subtext="Delivered to buyer"
-            icon={CheckCircle2}
-            colorGradient="linear-gradient(135deg, #16a34a, #22c55e)"
-            borderAccent="#16a34a"
-          />
+        {/* ── Stat Cards ─────────────────────────────────────── */}
+        <div className="ao-stats-grid">
+          <div className="ao-stat-card">
+            <div>
+              <div className="ao-stat-label">Total Platform Revenue</div>
+              <div className="ao-stat-value">GH₵ {stats.totalRev.toLocaleString()}</div>
+              <div className="ao-stat-sub">{stats.total} total orders placed</div>
+            </div>
+            <div className="ao-stat-icon" style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}>
+              <TrendingUp size={21} />
+            </div>
+          </div>
+          <div className="ao-stat-card">
+            <div>
+              <div className="ao-stat-label">Pending Orders</div>
+              <div className="ao-stat-value">{stats.pending}</div>
+              <div className="ao-stat-sub">Needs farmer response</div>
+            </div>
+            <div className="ao-stat-icon" style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}>
+              <Clock size={21} />
+            </div>
+          </div>
+          <div className="ao-stat-card">
+            <div>
+              <div className="ao-stat-label">In Processing / Transit</div>
+              <div className="ao-stat-value">{stats.processing}</div>
+              <div className="ao-stat-sub">Fulfillment in progress</div>
+            </div>
+            <div className="ao-stat-icon" style={{ background: 'linear-gradient(135deg, #2563eb, #3b82f6)' }}>
+              <Truck size={21} />
+            </div>
+          </div>
+          <div className="ao-stat-card">
+            <div>
+              <div className="ao-stat-label">Completed Deliveries</div>
+              <div className="ao-stat-value">{stats.delivered}</div>
+              <div className="ao-stat-sub">Delivered to buyer</div>
+            </div>
+            <div className="ao-stat-icon" style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)' }}>
+              <CheckCircle2 size={21} />
+            </div>
+          </div>
         </div>
 
-        {/* Filter Controls Bar */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          padding: '1.1rem 1.25rem',
-          border: '1px solid #e8ede9',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-          display: 'flex',
-          alignItems: 'center',
-          justify: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}>
-          {/* Status Tabs */}
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {/* ── Filter Controls ────────────────────────────────── */}
+        <div className="ao-filter-bar">
+          <div className="ao-tabs">
             {[
               { val: 'all', label: `All (${stats.total})` },
               { val: 'pending', label: `Pending (${stats.pending})` },
@@ -594,119 +430,85 @@ export default function AdminOrdersPage() {
             ].map(tab => (
               <button
                 key={tab.val}
+                className={`ao-tab ${statusFilter === tab.val ? 'active' : ''}`}
                 onClick={() => { setStatusFilter(tab.val); setPage(1); }}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '999px',
-                  border: statusFilter === tab.val ? '1.5px solid #1e5c3b' : '1px solid #e5e7eb',
-                  background: statusFilter === tab.val ? '#1e5c3b' : '#ffffff',
-                  color: statusFilter === tab.val ? '#ffffff' : '#4b5563',
-                  fontWeight: 700,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Search Box */}
-          <div style={{ position: 'relative', minWidth: '280px', flex: '1', maxWidth: '380px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+          <div className="ao-search-wrap">
+            <Search size={16} className="ao-search-icon" />
             <input
               type="text"
-              placeholder="Search by order #, buyer, phone, or farmer..."
+              className="ao-search-input"
+              placeholder="Search by order #, buyer, phone, farmer..."
               value={query}
               onChange={e => { setQuery(e.target.value); setPage(1); }}
-              style={{
-                width: '100%',
-                padding: '8px 32px 8px 36px',
-                borderRadius: '999px',
-                border: '1.5px solid #e5e7eb',
-                fontSize: '0.86rem',
-                outline: 'none',
-                background: '#f9fafb'
-              }}
             />
             {query && (
-              <button
-                onClick={() => setQuery('')}
-                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
-              >
+              <button className="ao-search-clear" onClick={() => setQuery('')}>
                 <X size={14} />
               </button>
             )}
           </div>
         </div>
 
-        {/* Orders Table Card */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '18px',
-          border: '1px solid #e8ede9',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-          overflow: 'hidden'
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+        {/* ── Orders Table ───────────────────────────────────── */}
+        <div className="ao-table-card">
+          <table className="ao-table">
             <thead>
-              <tr style={{ background: '#f8faf9', borderBottom: '1px solid #e8ede9' }}>
-                <th style={{ padding: '1rem 1.25rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 800 }}>Order #</th>
-                <th style={{ padding: '1rem 1.25rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 800 }}>Buyer</th>
-                <th style={{ padding: '1rem 1.25rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 800 }}>Farmer / Supplier</th>
-                <th style={{ padding: '1rem 1.25rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 800 }}>Items</th>
-                <th style={{ padding: '1rem 1.25rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 800 }}>Total (GH₵)</th>
-                <th style={{ padding: '1rem 1.25rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 800 }}>Date</th>
-                <th style={{ padding: '1rem 1.25rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 800 }}>Status</th>
-                <th style={{ padding: '1rem 1.25rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 800, textAlign: 'right' }}>Actions</th>
+              <tr>
+                <th>Order #</th>
+                <th>Buyer</th>
+                <th>Farmer / Supplier</th>
+                <th>Items</th>
+                <th>Total (GH₵)</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {pagedOrders.length > 0 ? (
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)
+              ) : pagedOrders.length > 0 ? (
                 pagedOrders.map(o => (
-                  <tr key={o.id} style={{ borderBottom: '1px solid #f3f4f6', transition: 'background 0.15s ease' }}>
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <span style={{ fontWeight: 800, color: '#1e5c3b', fontFamily: 'monospace', fontSize: '0.88rem' }}>
-                        {o.order_number}
-                      </span>
+                  <tr key={o.id}>
+                    <td>
+                      <span className="ao-order-num">{o.order_number}</span>
                     </td>
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <div style={{ fontWeight: 800, color: '#111827' }}>{o.buyer_name}</div>
-                      <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>{o.phone || o.buyer_email}</div>
+                    <td>
+                      <div className="ao-buyer-name">{o.buyer_name}</div>
+                      <div className="ao-buyer-sub">{o.phone || o.buyer_email || '—'}</div>
                     </td>
-                    <td style={{ padding: '1rem 1.25rem', color: '#374151', fontWeight: 600 }}>
+                    <td style={{ color: '#374151', fontWeight: 600 }}>
                       {o.farmer_name}
                     </td>
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <span style={{ background: '#f0faf4', border: '1px solid #bbf7d0', color: '#15803d', padding: '3px 9px', borderRadius: '12px', fontSize: '0.78rem', fontWeight: 700 }}>
+                    <td>
+                      <span className="ao-items-badge">
+                        <Package size={12} />
                         {o.items?.length || 1} item(s)
                       </span>
                     </td>
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <span style={{ fontWeight: 900, color: '#15803d', fontSize: '0.95rem' }}>GH₵ {o.total_amount}</span>
+                    <td>
+                      <span className="ao-amount">GH₵ {o.total_amount.toFixed(2)}</span>
                     </td>
-                    <td style={{ padding: '1rem 1.25rem', color: '#6b7280', fontSize: '0.83rem' }}>
-                      {new Date(o.created_at).toLocaleDateString()}
+                    <td>
+                      <span className="ao-date">
+                        {new Date(o.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
                     </td>
-                    <td style={{ padding: '1rem 1.25rem' }}>
+                    <td>
                       <OrderStatusBadge status={o.status} />
                     </td>
-                    <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="ao-actions">
                         <select
+                          className="ao-select"
                           value={o.status}
                           onChange={(e) => handleUpdateStatus(o.id, e.target.value)}
-                          style={{
-                            padding: '5px 8px',
-                            borderRadius: '8px',
-                            border: '1px solid #d1d5db',
-                            background: '#ffffff',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            color: '#374151',
-                            cursor: 'pointer'
-                          }}
                         >
                           <option value="pending">Pending</option>
                           <option value="processing">Processing</option>
@@ -714,21 +516,8 @@ export default function AdminOrdersPage() {
                           <option value="cancelled">Cancelled</option>
                         </select>
                         <button
-                          type="button"
+                          className="ao-view-btn"
                           onClick={() => { setSelectedOrder(o); setModalOpen(true); }}
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            border: '1.5px solid #1e5c3b',
-                            background: '#ffffff',
-                            color: '#1e5c3b',
-                            fontWeight: 800,
-                            fontSize: '0.78rem',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
                         >
                           <Eye size={14} /> View
                         </button>
@@ -738,10 +527,16 @@ export default function AdminOrdersPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '4rem 1rem', color: '#9ca3af' }}>
-                    <Package size={42} style={{ margin: '0 auto 0.75rem', opacity: 0.3 }} />
-                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#374151' }}>No Orders Found</div>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.88rem' }}>There are currently no orders matching your selected filters.</p>
+                  <td colSpan={8}>
+                    <div className="ao-empty">
+                      <Package size={42} className="ao-empty-icon" />
+                      <div className="ao-empty-title">No Orders Found</div>
+                      <p className="ao-empty-sub">
+                        {orders.length === 0
+                          ? 'No orders have been placed yet. Orders will appear here once buyers start purchasing.'
+                          : 'No orders match your current filters. Try adjusting the search or status filter.'}
+                      </p>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -750,56 +545,31 @@ export default function AdminOrdersPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div style={{
-              padding: '1rem 1.25rem',
-              borderTop: '1px solid #e8ede9',
-              display: 'flex',
-              alignItems: 'center',
-              justify: 'space-between',
-              background: '#fafafa'
-            }}>
-              <span style={{ fontSize: '0.83rem', color: '#6b7280', fontWeight: 600 }}>
-                Page {page} of {totalPages} ({filteredOrders.length} total orders)
+            <div className="ao-pagination">
+              <span className="ao-page-info">
+                Page {page} of {totalPages} · {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
               </span>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="ao-page-btns">
                 <button
+                  className="ao-page-btn"
                   disabled={page === 1}
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #d1d5db',
-                    background: page === 1 ? '#f3f4f6' : '#ffffff',
-                    color: page === 1 ? '#9ca3af' : '#374151',
-                    fontWeight: 700,
-                    fontSize: '0.82rem',
-                    cursor: page === 1 ? 'not-allowed' : 'pointer'
-                  }}
                 >
-                  Prev
+                  <ChevronLeft size={14} style={{ verticalAlign: 'middle', marginRight: '2px' }} /> Prev
                 </button>
                 <button
+                  className="ao-page-btn"
                   disabled={page === totalPages}
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #d1d5db',
-                    background: page === totalPages ? '#f3f4f6' : '#ffffff',
-                    color: page === totalPages ? '#9ca3af' : '#374151',
-                    fontWeight: 700,
-                    fontSize: '0.82rem',
-                    cursor: page === totalPages ? 'not-allowed' : 'pointer'
-                  }}
                 >
-                  Next
+                  Next <ChevronRight size={14} style={{ verticalAlign: 'middle', marginLeft: '2px' }} />
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Modal */}
+        {/* ── Order Detail Modal ─────────────────────────────── */}
         <OrderDetailModal
           order={selectedOrder}
           open={modalOpen}

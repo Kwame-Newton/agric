@@ -3145,3 +3145,202 @@ section {
   from { transform: translateX(-50%) translateY(80px); opacity: 0; }
   to   { transform: translateX(-50%) translateY(0);   opacity: 1; }
 }
+
+/* ─── Forgot Password Modal ──────────────────────────────────── */
+.fpw-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(5px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  animation: fpwFadeIn 0.2s ease;
+}
+@keyframes fpwFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fpw-card {
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.22);
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  text-align: center;
+  animation: fpwSlideUp 0.25s ease;
+}
+@keyframes fpwSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.fpw-close {
+  position: absolute; top: 1.1rem; right: 1.1rem;
+  background: #f3f4f6; border: none; border-radius: 50%;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #6b7280;
+  transition: background 0.15s;
+}
+.fpw-close:hover { background: #e5e7eb; }
+.fpw-icon-wrap {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(45,106,79,0.12), rgba(45,106,79,0.06));
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1.25rem;
+  color: #2D6A4F;
+}
+.fpw-title {
+  font-size: 1.4rem; font-weight: 800; color: #111827; margin-bottom: 0.6rem;
+}
+.fpw-desc {
+  font-size: 0.92rem; color: #6b7280; line-height: 1.55; margin-bottom: 1.5rem;
+}
+.fpw-error-box {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 10px; padding: 0.75rem 1rem;
+  color: #dc2626; font-size: 0.88rem; font-weight: 600;
+  margin-bottom: 1rem; text-align: left;
+}
+.fpw-form { display: flex; flex-direction: column; gap: 0.85rem; }
+.fpw-input-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.fpw-input-icon {
+  position: absolute; left: 0.9rem; color: #9ca3af; pointer-events: none;
+}
+.fpw-input {
+  width: 100%; padding: 0.8rem 0.9rem 0.8rem 2.6rem;
+  border: 1px solid #d1d5db; border-radius: 12px;
+  font-size: 0.95rem; font-family: inherit; font-weight: 600;
+  color: #111827; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.fpw-input:focus {
+  outline: none; border-color: #2D6A4F;
+  box-shadow: 0 0 0 3px rgba(45,106,79,0.12);
+}
+.fpw-btn {
+  width: 100%; padding: 0.85rem 1rem;
+  border-radius: 12px; font-weight: 800; font-size: 0.95rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.fpw-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+.fpw-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.fpw-btn-primary { background: linear-gradient(135deg, #1e5c3b, #2D6A4F); color: #fff; border: none; }
+.fpw-btn-secondary { background: #f3f4f6; color: #374151; border: none; }
+.fpw-btn-ghost { background: transparent; color: #6b7280; border: none; font-size: 0.88rem; }
+.fpw-success { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+.fpw-success-icon { color: #2D6A4F; }
+.fpw-success .fpw-desc { margin-bottom: 1.5rem; }
+
+/* ─── Buyer Settings Modal ───────────────────────────────────── */
+.bsm-overlay {
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(5px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  animation: fpwFadeIn 0.2s ease;
+}
+.bsm-card {
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.2);
+  width: 100%; max-width: 540px;
+  max-height: 90vh; overflow-y: auto;
+  position: relative;
+  animation: fpwSlideUp 0.25s ease;
+}
+.bsm-header {
+  padding: 1.5rem 1.75rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; background: #fff; z-index: 1;
+  border-radius: 24px 24px 0 0;
+}
+.bsm-header-title { font-size: 1.2rem; font-weight: 800; color: #111827; }
+.bsm-header-sub { font-size: 0.85rem; color: #6b7280; margin-top: 0.15rem; }
+.bsm-close {
+  background: #f3f4f6; border: none; border-radius: 50%;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #6b7280; flex-shrink: 0;
+  transition: background 0.15s;
+}
+.bsm-close:hover { background: #e5e7eb; }
+.bsm-body { padding: 1.5rem 1.75rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+.bsm-section-title {
+  font-size: 0.78rem; font-weight: 800; letter-spacing: 0.07em;
+  text-transform: uppercase; color: #9ca3af; margin-bottom: 0.85rem;
+}
+.bsm-info-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.6rem 0; border-bottom: 1px solid #f3f4f6; font-size: 0.92rem;
+}
+.bsm-info-row:last-child { border-bottom: none; }
+.bsm-info-label { color: #6b7280; font-weight: 600; }
+.bsm-info-val { font-weight: 700; color: #111827; }
+
+.bsm-field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.85rem; }
+.bsm-label { font-size: 0.82rem; font-weight: 800; color: #4b5563; }
+.bsm-input {
+  width: 100%; padding: 0.75rem 0.9rem;
+  border: 1px solid #d1d5db; border-radius: 12px;
+  font-family: inherit; font-size: 0.92rem; font-weight: 600; color: #111827;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.bsm-input:focus {
+  outline: none; border-color: #2D6A4F;
+  box-shadow: 0 0 0 3px rgba(45,106,79,0.12);
+}
+.bsm-error { color: #dc2626; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem; }
+.bsm-toast {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem;
+  border-radius: 10px; font-size: 0.88rem; font-weight: 700; margin-bottom: 0.5rem;
+}
+.bsm-toast-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.bsm-toast-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+.bsm-toggle-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.7rem 0; border-bottom: 1px solid #f3f4f6;
+}
+.bsm-toggle-row:last-child { border-bottom: none; }
+.bsm-toggle-label { font-size: 0.92rem; font-weight: 600; color: #374151; }
+.bsm-toggle-sub { font-size: 0.8rem; color: #9ca3af; margin-top: 0.1rem; }
+.bsm-toggle-switch {
+  position: relative; width: 44px; height: 24px;
+  background: #d1d5db; border-radius: 999px; cursor: pointer;
+  transition: background 0.2s; flex-shrink: 0; border: none;
+}
+.bsm-toggle-switch.on { background: #2D6A4F; }
+.bsm-toggle-knob {
+  position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; transition: left 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.bsm-toggle-switch.on .bsm-toggle-knob { left: 22px; }
+
+.bsm-danger-box {
+  background: #fff5f5; border: 1px solid #fecaca;
+  border-radius: 14px; padding: 1.25rem;
+}
+.bsm-danger-title { font-size: 0.92rem; font-weight: 800; color: #dc2626; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
+.bsm-danger-desc { font-size: 0.85rem; color: #9b1c1c; line-height: 1.55; margin-bottom: 1rem; }
+.bsm-delete-confirm-row { display: flex; flex-direction: column; gap: 0.6rem; }
+.bsm-delete-actions { display: flex; gap: 0.6rem; }
+.bsm-btn {
+  padding: 0.75rem 1.1rem; border-radius: 12px; font-weight: 800; font-size: 0.9rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+  transition: opacity 0.15s;
+}
+.bsm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.bsm-btn-primary { background: linear-gradient(135deg, #1e5c3b, #2D6A4F); color: #fff; border: none; }
+.bsm-btn-danger { background: #dc2626; color: #fff; border: none; }
+.bsm-btn-ghost { background: #f3f4f6; color: #374151; border: none; }
+.bsm-btn:hover:not(:disabled) { opacity: 0.88; }
+.bsm-divider { height: 1px; background: #f3f4f6; }
