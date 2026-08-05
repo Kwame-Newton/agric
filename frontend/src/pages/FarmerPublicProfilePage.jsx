@@ -5,8 +5,7 @@ import {
   ShieldCheck, ArrowLeft, Check, Play, Pause, Eye
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MOCK_FARMERS } from '../data/mockFarmPosts';
-import { fetchFarmerPosts } from '../services/farmBlogService';
+import { fetchFarmerPosts, fetchFarmerProfile } from '../services/farmBlogService';
 import FarmerChatModal from '../components/FarmerChatModal';
 import './FarmerPublicProfilePage.css';
 
@@ -30,10 +29,12 @@ export default function FarmerPublicProfilePage() {
 
   useEffect(() => {
     const loadData = async () => {
-      const foundFarmer = MOCK_FARMERS.find(f => f.id === id) || MOCK_FARMERS[0];
+      // 1. Fetch Farmer Profile
+      const foundFarmer = await fetchFarmerProfile(id);
       setFarmer(foundFarmer);
 
-      const farmerPosts = await fetchFarmerPosts(foundFarmer.id);
+      // 2. Fetch Farmer Posts
+      const farmerPosts = await fetchFarmerPosts(id);
       setPosts(farmerPosts);
     };
 

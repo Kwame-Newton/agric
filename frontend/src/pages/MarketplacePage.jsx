@@ -1103,11 +1103,11 @@ export default function MarketplacePage() {
           </Link>
 
           {/* Center Tabs: Marketplace & Farm Blog */}
-          <div className="mp-tabs-center" style={{ display: 'flex', alignItems: 'center', background: '#f3f4f6', padding: '4px', borderRadius: '30px', gap: '4px', margin: '0 12px' }}>
-            <Link to="/marketplace" style={{ padding: '7px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none', background: '#2D6A4F', color: '#ffffff', boxShadow: '0 2px 6px rgba(45,106,79,0.3)' }}>
+          <div className="mp-tabs-center">
+            <Link to="/marketplace" className="mp-tab-link mp-tab-link-active">
               Marketplace
             </Link>
-            <Link to="/blog" style={{ padding: '7px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none', background: '#ffffff', color: '#6b7280' }}>
+            <Link to="/blog" className="mp-tab-link">
               Farm Blog
             </Link>
           </div>
@@ -1194,6 +1194,75 @@ export default function MarketplacePage() {
             <Filter size={16} /> Filters
           </button>
         </div>
+
+        {/* Mobile filter drawer */}
+        {mobileFilterOpen && (
+          <div className="mp-filter-overlay" onClick={() => setMobileFilterOpen(false)}>
+            <div className="mp-filter-drawer" onClick={e => e.stopPropagation()}>
+              <div className="mp-filter-drawer-header">
+                <span>Filters</span>
+                <button onClick={() => setMobileFilterOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="mp-sidebar-section">
+                <h4 className="mp-sidebar-title">Categories</h4>
+                <div className="mp-category-list">
+                  {categories.map(cat => (
+                    <button
+                      key={cat.id}
+                      className={`mp-category-btn ${selectedCategory === cat.id ? 'active' : ''}`}
+                      onClick={() => { setSelectedCategory(cat.id); setMobileFilterOpen(false); }}
+                    >
+                      <span>{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mp-sidebar-section">
+                <h4 className="mp-sidebar-title">Price Range</h4>
+                <div className="mp-price-display">
+                  <span>₵{priceRange[0]}</span>
+                  <span>₵{priceRange[1]}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0} max={50}
+                  value={priceRange[1]}
+                  onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])}
+                  className="mp-price-slider"
+                />
+              </div>
+
+              <div className="mp-sidebar-section">
+                <h4 className="mp-sidebar-title">Location</h4>
+                <div className="mp-category-list">
+                  {['All Locations', 'Accra', 'Kumasi', 'Ejisu', 'Obuasi', 'Mampong'].map(loc => (
+                    <button
+                      key={loc}
+                      className={`mp-category-btn ${location === loc ? 'active' : ''}`}
+                      onClick={() => { setLocation(loc); setMobileFilterOpen(false); }}
+                    >
+                      <MapPin size={14} />
+                      <span>{loc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ padding: '1rem' }}>
+                <button
+                  className="mp-apply-btn"
+                  onClick={() => setMobileFilterOpen(false)}
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mp-content-wrap">
           {/* Sidebar Filters (desktop) */}

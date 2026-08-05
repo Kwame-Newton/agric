@@ -369,3 +369,124 @@
 .fm-btn-secondary:hover{ background: var(--bg-offset); }
 .fm-btn-primary:hover{ filter: brightness(1.03); transform: translateY(-1px); }
 
+/* ── Mobile Responsive (≤ 768px) ── */
+@media (max-width: 768px) {
+  .fm-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .fm-title {
+    font-size: 1.25rem;
+  }
+  .fm-subtitle {
+    font-size: 0.85rem;
+  }
+  .fm-add-btn {
+    justify-content: center;
+  }
+  
+  .fm-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .fm-search {
+    width: 100%;
+  }
+  .fm-filter-selects {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .fm-select {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  /* Table to Cards */
+  .fm-table-wrap {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .fm-table, .fm-table tbody, .fm-table tr, .fm-table td {
+    display: block;
+    width: 100%;
+  }
+  .fm-table thead {
+    display: none; /* Hide headers on mobile */
+  }
+  .fm-table tr {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    grid-template-areas: 
+      "img info"
+      "actions actions";
+    gap: 0.75rem;
+  }
+  .fm-table td {
+    border: none;
+    padding: 0;
+  }
+  
+  /* Map table cells to grid areas */
+  .fm-table td:nth-child(1) { grid-area: img; }
+  .fm-table td:nth-child(2) { grid-area: info; align-self: start; font-size: 1rem; }
+  .fm-table td:nth-child(3),
+  .fm-table td:nth-child(4),
+  .fm-table td:nth-child(5),
+  .fm-table td:nth-child(6) {
+    display: inline-block;
+    grid-area: info;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+  .fm-table td:nth-child(7) { 
+    grid-area: info; 
+    justify-self: start; 
+    align-self: end;
+    margin-top: 0.25rem;
+  }
+  .fm-table td:nth-child(8) { 
+    grid-area: actions; 
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.75rem;
+  }
+
+  .fm-thumb {
+    width: 60px;
+    height: 60px;
+  }
+
+  .fm-actions {
+    justify-content: flex-start;
+  }
+  .fm-action {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .fm-modal-header {
+    padding: 1rem;
+  }
+  .fm-modal-body {
+    padding: 1rem;
+  }
+  .fm-modal-footer {
+    padding: 1rem;
+    flex-direction: column-reverse;
+  }
+  .fm-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

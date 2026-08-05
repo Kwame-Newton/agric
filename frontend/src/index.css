@@ -2184,6 +2184,142 @@ section {
   flex: 1;
 }
 
+/* ── Farmer Dashboard Mobile ─────────────────────────── */
+@media (max-width: 768px) {
+  .dashboard-topbar {
+    padding: 0 0.75rem;
+    height: 54px;
+    gap: 0.6rem;
+  }
+  .topbar-title {
+    font-size: 0.95rem;
+  }
+  .topbar-user-info {
+    display: none;
+  }
+  .dashboard-content {
+    padding: 1rem 0.75rem;
+  }
+  .farmer-dashboard {
+    gap: 1rem;
+  }
+  /* Stats grid: 2 columns compact */
+  .stats-grid {
+    gap: 0.65rem;
+  }
+  .stat-card-db {
+    padding: 0.85rem;
+  }
+  .stat-db-label {
+    font-size: 0.68rem;
+  }
+  .stat-db-value {
+    font-size: 1.4rem;
+    margin-bottom: 0.3rem;
+  }
+  .stat-db-icon-wrap {
+    width: 30px;
+    height: 30px;
+  }
+  .stat-db-icon-wrap svg {
+    width: 16px;
+    height: 16px;
+  }
+  .stat-db-footer {
+    font-size: 0.72rem;
+  }
+  .stat-trend-up, .stat-trend-down {
+    padding: 0.1rem 0.35rem;
+    font-size: 0.7rem;
+  }
+  /* Dashboard cards */
+  .dashboard-row-2,
+  .dashboard-row-3 {
+    gap: 1rem;
+  }
+  .db-card {
+    padding: 1rem;
+  }
+  .db-card-header {
+    margin-bottom: 1rem;
+    gap: 0.5rem;
+  }
+  .db-card-title {
+    font-size: 0.9rem;
+  }
+  .db-view-all-btn {
+    font-size: 0.75rem;
+  }
+  /* Revenue card */
+  .revenue-total {
+    font-size: 1.25rem;
+  }
+  .revenue-period {
+    font-size: 0.75rem;
+  }
+  .db-filter-select {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.75rem;
+  }
+  .revenue-chart-wrap {
+    height: 100px;
+  }
+  .revenue-x-labels {
+    font-size: 0.65rem;
+  }
+  /* Orders table */
+  .orders-table {
+    font-size: 0.78rem;
+  }
+  .orders-table th {
+    padding: 0.5rem 0.45rem;
+    font-size: 0.65rem;
+  }
+  .orders-table td {
+    padding: 0.6rem 0.45rem;
+  }
+  .order-status-badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.45rem;
+  }
+  /* Hide Items column on small screens */
+  .orders-table th:nth-child(3),
+  .orders-table td:nth-child(3) {
+    display: none;
+  }
+  /* Top crops */
+  .top-crops-list {
+    gap: 0.85rem;
+  }
+  .top-crop-name {
+    font-size: 0.82rem;
+  }
+  .top-crop-revenue {
+    font-size: 0.82rem;
+  }
+  .top-crop-sold {
+    font-size: 0.7rem;
+    padding-left: 1.35rem;
+  }
+  .crop-progress-bar-bg {
+    height: 5px;
+  }
+  /* Farm updates */
+  .farm-updates-grid {
+    gap: 0.6rem;
+  }
+  .farm-update-title {
+    font-size: 0.75rem;
+  }
+  .farm-update-date {
+    font-size: 0.68rem;
+  }
+  .db-add-update-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
 /* ── Farmer Dashboard Page ── */
 .farmer-dashboard {
   display: flex;
@@ -3344,3 +3480,442 @@ section {
 .bsm-btn-ghost { background: #f3f4f6; color: #374151; border: none; }
 .bsm-btn:hover:not(:disabled) { opacity: 0.88; }
 .bsm-divider { height: 1px; background: #f3f4f6; }
+
+/* ─── Marketplace Center Tabs ─────────────────────────────────── */
+.mp-tabs-center {
+  display: flex;
+  align-items: center;
+  background: #f3f4f6;
+  padding: 4px;
+  border-radius: 30px;
+  gap: 4px;
+  margin: 0 12px;
+  flex-shrink: 0;
+}
+.mp-tab-link {
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  background: #ffffff;
+  color: #6b7280;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.mp-tab-link:hover {
+  color: #374151;
+}
+.mp-tab-link-active {
+  background: #2D6A4F;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(45,106,79,0.3);
+}
+.mp-tab-link-active:hover {
+  color: #ffffff;
+}
+
+/* ─── Marketplace Mobile Responsive ──────────────────────────── */
+
+/* ── Small tablets & large phones (≤768px) ── */
+@media (max-width: 768px) {
+  /* Topbar: wrap to two rows */
+  .mp-topbar-inner {
+    flex-wrap: wrap;
+    padding: 0.65rem 0.75rem;
+    gap: 0.6rem;
+  }
+
+  /* Search bar goes full width on second row */
+  .mp-search-wrap {
+    order: 10;
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+  .mp-search-input {
+    font-size: 0.85rem;
+    padding: 0.6rem 2.5rem;
+  }
+
+  /* Shrink logo */
+  .mp-logo {
+    font-size: 1.1rem;
+    gap: 0.3rem;
+  }
+
+  /* Tabs shrink */
+  .mp-tabs-center {
+    margin: 0 auto 0 0;
+    padding: 3px;
+    gap: 2px;
+  }
+  .mp-tab-link {
+    padding: 5px 12px;
+    font-size: 0.78rem;
+  }
+
+  /* Body padding */
+  .mp-body {
+    padding: 0.75rem;
+  }
+
+  /* Page title */
+  .mp-page-title {
+    font-size: 1.2rem;
+  }
+
+  /* Toolbar */
+  .mp-toolbar {
+    padding: 0.65rem 0.85rem;
+    gap: 0.5rem;
+  }
+  .mp-results-count {
+    font-size: 0.8rem;
+  }
+  .mp-sort-select {
+    font-size: 0.78rem;
+    padding: 0.35rem 0.65rem;
+  }
+
+  /* Product grid: 2 columns but tighter */
+  .mp-grid {
+    gap: 0.65rem;
+  }
+
+  /* Product cards */
+  .mp-product-body {
+    padding: 0.65rem;
+    gap: 0.2rem;
+  }
+  .mp-farm-name {
+    font-size: 0.65rem;
+  }
+  .mp-product-name {
+    font-size: 0.82rem;
+  }
+  .mp-product-location {
+    font-size: 0.68rem;
+  }
+  .mp-stars {
+    margin: 0.1rem 0;
+  }
+  .mp-stars .star-filled,
+  .mp-stars .star-empty {
+    width: 11px;
+    height: 11px;
+  }
+  .mp-rating-num {
+    font-size: 0.68rem;
+  }
+  .mp-product-price {
+    font-size: 0.9rem;
+  }
+  .mp-unit {
+    font-size: 0.68rem;
+  }
+  .mp-add-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.7rem;
+  }
+  .mp-qty-ctrl button {
+    width: 24px;
+    height: 24px;
+  }
+  .mp-qty-ctrl span {
+    min-width: 22px;
+    font-size: 0.78rem;
+  }
+  .mp-product-badge {
+    font-size: 0.6rem;
+    padding: 0.15rem 0.4rem;
+    top: 0.4rem;
+    left: 0.4rem;
+  }
+  .mp-wish-btn {
+    width: 26px;
+    height: 26px;
+    top: 0.4rem;
+    right: 0.4rem;
+    opacity: 1; /* always show on mobile (no hover) */
+  }
+  .mp-quick-view-btn {
+    font-size: 0.7rem;
+    padding: 0.4rem;
+  }
+
+  /* Cart drawer full-width */
+  .mp-cart-drawer {
+    width: 100vw;
+  }
+  .mp-cart-header {
+    padding: 1rem;
+  }
+  .mp-cart-body {
+    padding: 1rem;
+  }
+  .mp-cart-footer {
+    padding: 1rem;
+  }
+  .mp-cart-item-img {
+    width: 52px;
+    height: 52px;
+  }
+  .mp-cart-item-name {
+    font-size: 0.85rem;
+  }
+
+  /* Quick View modal */
+  .mp-modal-card {
+    border-radius: 16px;
+    max-height: 92vh;
+  }
+  .mp-qv-grid {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+    gap: 1rem;
+  }
+  .mp-qv-image-wrap {
+    height: 200px;
+    border-radius: 12px;
+  }
+  .mp-qv-title {
+    font-size: 1.15rem;
+  }
+  .mp-qv-price {
+    font-size: 1.25rem;
+  }
+
+  /* Orders modal */
+  .mp-orders-modal {
+    max-width: 100%;
+    border-radius: 16px;
+    max-height: 90vh;
+  }
+
+  /* Settings modal */
+  .bsm-card {
+    max-width: 100%;
+    border-radius: 18px;
+  }
+  .bsm-header {
+    padding: 1rem 1.25rem 0.75rem;
+    border-radius: 18px 18px 0 0;
+  }
+  .bsm-body {
+    padding: 1rem 1.25rem;
+  }
+
+  /* Bottom logout wrap */
+  .mp-bottom-logout-wrap {
+    width: calc(100% - 16px);
+    bottom: 16px;
+  }
+  .mp-bottom-logout-btn {
+    padding: 0.8rem 1rem;
+    font-size: 0.88rem;
+  }
+
+  /* Floating cart banner */
+  .mp-cart-float {
+    padding: 0.7rem 1rem;
+    gap: 1rem;
+    bottom: 1rem;
+    font-size: 0.82rem;
+  }
+}
+
+/* ── Very small phones (≤480px) ── */
+@media (max-width: 480px) {
+  .mp-topbar-inner {
+    padding: 0.5rem 0.6rem;
+    gap: 0.5rem;
+  }
+
+  /* Logo: icon only */
+  .mp-logo span {
+    font-size: 0;
+    width: 0;
+    overflow: hidden;
+  }
+  .mp-logo {
+    gap: 0;
+  }
+  .mp-logo-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Tabs even smaller */
+  .mp-tabs-center {
+    padding: 2px;
+  }
+  .mp-tab-link {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+  }
+
+  /* Avatar smaller */
+  .mp-topbar-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.65rem;
+  }
+
+  .mp-search-input {
+    font-size: 0.82rem;
+    padding: 0.55rem 2.25rem;
+  }
+
+  /* Grid stays 2 columns on small phones */
+  .mp-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  /* Tighter product cards at small size */
+  .mp-product-body {
+    padding: 0.5rem;
+    gap: 0.15rem;
+  }
+  .mp-farm-name {
+    font-size: 0.58rem;
+  }
+  .mp-product-name {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+  .mp-product-location {
+    display: none;
+  }
+  .mp-stars {
+    display: none;
+  }
+  .mp-product-price {
+    font-size: 0.82rem;
+  }
+  .mp-unit {
+    font-size: 0.6rem;
+  }
+  .mp-product-footer {
+    margin-top: 0.25rem;
+    gap: 0.25rem;
+  }
+  .mp-add-btn {
+    padding: 0.3rem 0.45rem;
+    font-size: 0.62rem;
+  }
+  .mp-qty-ctrl {
+    transform: scale(0.85);
+    transform-origin: right center;
+  }
+  /* Hide quick view on very small touch devices */
+  .mp-quick-view-btn {
+    display: none;
+  }
+
+  /* Mobile filter bar */
+  .mp-mobile-filter-bar {
+    margin-bottom: 0.6rem;
+  }
+  .mp-page-title {
+    font-size: 1.05rem;
+  }
+  .mp-mobile-filter-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  /* Toolbar */
+  .mp-toolbar {
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Filter drawer wider on small phones */
+  .mp-filter-drawer {
+    width: 85vw;
+  }
+
+  /* Modal improvements */
+  .mp-modal-overlay {
+    padding: 0.5rem;
+  }
+  .mp-modal-card {
+    border-radius: 14px;
+  }
+
+  /* Cart drawer */
+  .mp-cart-header {
+    padding: 0.75rem;
+  }
+  .mp-cart-title {
+    font-size: 1rem;
+  }
+  .mp-cart-body {
+    padding: 0.75rem;
+  }
+  .mp-cart-footer {
+    padding: 0.75rem;
+  }
+  .mp-checkout-btn {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    border-radius: 10px;
+  }
+
+  /* Avatar dropdown */
+  .mp-avatar-dropdown {
+    width: 200px;
+    padding: 0.5rem;
+    right: -0.5rem;
+  }
+  .mp-avatar-dropdown-item {
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    border-radius: 10px;
+  }
+
+  /* Empty state */
+  .mp-empty-state {
+    padding: 2.5rem 1.25rem;
+  }
+  .mp-empty-icon {
+    font-size: 3rem;
+  }
+  .mp-empty-state h3 {
+    font-size: 1.05rem;
+  }
+  .mp-empty-state p {
+    font-size: 0.85rem;
+  }
+
+  /* Orders modal adjustments */
+  .mp-orders-modal {
+    border-radius: 14px;
+  }
+}
+
+/* ── Touch device improvements ── */
+@media (hover: none) and (pointer: coarse) {
+  /* Always show wishlist heart on touch */
+  .mp-wish-btn {
+    opacity: 1;
+  }
+  /* Bigger tap targets */
+  .mp-add-btn {
+    min-height: 36px;
+  }
+  .mp-category-btn {
+    min-height: 40px;
+  }
+  .mp-cart-btn {
+    padding: 0.5rem;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .mp-qty-ctrl button {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+

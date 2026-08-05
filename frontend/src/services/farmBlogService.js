@@ -329,3 +329,76 @@ function formatRelativeTime(dateString) {
   if (days === 1) return '1 day ago';
   return `${days} days ago`;
 }
+
+// ─── Fetch Farmer Profile Details ───
+export async function fetchFarmerProfile(farmerId) {
+  if (!farmerId) return null;
+
+  try {
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', farmerId)
+      .single();
+
+    const { data: farmerData, error: farmerError } = await supabase
+      .from('farmers')
+      .select('*')
+      .eq('id', farmerId)
+      .single();
+
+    const { data: cropsData, error: cropsError } = await supabase
+      .from('crops')
+      .select('*')
+      .eq('farmer_id', farmerId);
+
+    if (!profileError && !farmerError && profileData && farmerData) {
+      const fetchedCrops = (!cropsError && cropsData) 
+        ? cropsData.map(c => ({ ...c, image: c.image_url })) 
+        : [];
+
+      return {
+        id: farmerId,
+        name: profileData.full_name || 'AgriLink Farmer',
+        farmName: farmerData.farm_name || 'Green Acres Farm',
+        location: farmerData.farm_location || 'Ghana',
+        avatar: profileData.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+        verified: true,
+        rating: 4.8,
+        reviewsCount: 12,
+        bio: farmerData.farm_bio || 'Sustainable local farming.',
+        phone: profileData.phone || '+233 24 000 0000',
+        crops: fetchedCrops
+      };
+    }
+  } catch (err) {
+    console.warn('Supabase fetch error for farmer profile:', err);
+  }
+
+  // Fallback: try to extract from local posts
+  const local = getLocalPosts();
+  const postWithFarmer = local.find(p => (p.farmer_id === farmerId || p.farmer?.id === farmerId) && p.farmer);
+  if (postWithFarmer && postWithFarmer.farmer) {
+    return {
+      ...postWithFarmer.farmer,
+      reviewsCount: 12,
+      crops: postWithFarmer.farmer.crops || []
+    };
+  }
+
+  // Final fallback if farmer profile can't be found anywhere
+  return {
+    id: farmerId,
+    name: 'AgriLink Farmer',
+    farmName: 'Unknown Farm',
+    location: 'Ghana',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    verified: false,
+    rating: 0,
+    reviewsCount: 0,
+    bio: 'This farmer has not set up their profile yet.',
+    phone: '',
+    crops: []
+  };
+}
+
