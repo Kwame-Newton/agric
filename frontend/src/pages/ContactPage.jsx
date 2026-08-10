@@ -8,7 +8,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import './ContactPage.css';
-
+import { submitContactFormMessage } from '../services/chatService';
 
 function ContactCard({ icon: Icon, title, lines }) {
   return (
@@ -34,11 +34,12 @@ export default function ContactPage() {
   const [subject, setSubject] = useState('General Enquiry');
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState({ type: null, text: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   const subjectOptions = useMemo(
     () => [
       'General Enquiry',
-      'farmer Verification Request',
+      'Farmer Verification Request',
       'Technical Support',
       'Report a Problem',
       'Partnership / Business',
@@ -47,7 +48,7 @@ export default function ContactPage() {
     []
   );
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
 
     if (!fullName.trim()) {
@@ -63,12 +64,31 @@ export default function ContactPage() {
       return;
     }
 
-    // Demo-only submit
-    setStatus({ type: 'success', text: 'Message sent! Our team will get back to you shortly.' });
-    setFullName('');
-    setEmail('');
-    setSubject('General Enquiry');
-    setMessage('');
+    setSubmitting(true);
+    try {
+      await submitContactFormMessage({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        subject,
+        message: message.trim(),
+      });
+
+      setStatus({
+        type: 'success',
+        text: subject.includes('Verification')
+          ? 'Verification request submitted! Our admin team will review your account shortly.'
+          : 'Message sent! Our admin team will get back to you shortly.',
+      });
+      setFullName('');
+      setEmail('');
+      setSubject('General Enquiry');
+      setMessage('');
+    } catch (err) {
+      console.error('Contact form submission error:', err);
+      setStatus({ type: 'error', text: 'Failed to send message. Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

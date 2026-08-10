@@ -6,7 +6,8 @@ import {
   createFarmPost,
   updateFarmPost,
   deleteFarmPost,
-  fileToDataUrl
+  fileToDataUrl,
+  uploadFarmMedia
 } from '../services/farmBlogService';
 import './FarmerFarmBlogPage.css';
 
@@ -137,7 +138,7 @@ export default function FarmerFarmBlogPage() {
     setDraftFile(file);
     setDraftType(isVid ? 'video' : 'image');
 
-    // Generate preview / data URL
+    // Generate quick preview
     if (isVid) {
       const vidUrl = URL.createObjectURL(file);
       setDraftPreviewUrl(vidUrl);
@@ -156,17 +157,7 @@ export default function FarmerFarmBlogPage() {
       let finalMediaUrl = draftPreviewUrl;
 
       if (draftFile) {
-        if (draftType === 'image') {
-          finalMediaUrl = await fileToDataUrl(draftFile);
-        } else {
-          // For video file, convert to FileReader Data URL
-          finalMediaUrl = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (ev) => resolve(ev.target.result);
-            reader.onerror = () => resolve(draftPreviewUrl);
-            reader.readAsDataURL(draftFile);
-          });
-        }
+        finalMediaUrl = await uploadFarmMedia(draftFile, draftType);
       }
 
       const farmerDetails = {

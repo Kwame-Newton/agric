@@ -29,7 +29,7 @@ export function fileToDataUrl(file, maxWidth = 1000, maxHeight = 1000) {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
+          resolve(canvas.toDataURL('image/jpeg', 0.75));
         };
         img.onerror = () => resolve(e.target.result);
         img.src = e.target.result;
@@ -40,6 +40,49 @@ export function fileToDataUrl(file, maxWidth = 1000, maxHeight = 1000) {
     reader.onerror = () => resolve(null);
     reader.readAsDataURL(file);
   });
+}
+
+// ─── Upload Farm Media File (Supabase Storage with fast compression fallback) ───
+export async function uploadFarmMedia(file, type = 'image') {
+  if (!file) return null;
+
+  try {
+    const ext = file.name ? file.name.split('.').pop() : (type === 'video' ? 'mp4' : 'jpg');
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const filePath = `posts/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from('farm_media')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (!error && data) {
+      const { data: publicData } = supabase.storage
+        .from('farm_media')
+        .getPublicUrl(filePath);
+
+      if (publicData?.publicUrl) {
+        return publicData.publicUrl;
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase storage upload error/fallback:', err);
+  }
+
+  // Fallback if storage bucket is not created yet
+  if (type === 'image') {
+    return await fileToDataUrl(file, 800, 800);
+  } else {
+    // For video without bucket, create Object URL or data URL
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => resolve(ev.target.result);
+      reader.onerror = () => resolve(URL.createObjectURL(file));
+      reader.readAsDataURL(file);
+    });
+  }
 }
 
 // Get stored local posts (returns empty array if none created yet)

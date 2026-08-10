@@ -361,17 +361,37 @@
 .fm-toast-text{ font-weight: 950; color:#163226; }
 
 /* Mobile */
-@media (max-width: 767px){
-  /* Use modern viewport units to avoid iOS/Android address-bar resize issues */
-  .fm-messages-shell{
-    height: auto;
-    min-height: 100svh;
-    gap: 0;
+@media (max-width: 768px){
+  /* Negate dashboard-content padding to make chat full screen */
+  .fm-page {
+    margin: -1rem -0.75rem -1rem -0.75rem;
+    border-radius: 0;
+    height: calc(100svh - 54px); /* 54px is the mobile topbar height */
+    padding-bottom: 0;
+    display: flex;
+    flex-direction: column;
   }
 
-  .fm-left{ width: 100%; border-radius: 16px; }
-  .fm-right{ border-radius: 16px; }
-  .fm-hidden-mobile{ display:none; }
+  .fm-messages-shell{
+    height: 100%;
+    min-height: 0;
+    gap: 0;
+    flex: 1;
+  }
+
+  .fm-left{ 
+    width: 100%; 
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  
+  .fm-right{ 
+    border-radius: 0;
+    border: none;
+  }
+  
+  .fm-hidden-mobile{ display:none !important; }
 
   .fm-right{
     display:flex;
@@ -379,14 +399,22 @@
     min-height: 0; /* critical for nested overflow */
   }
 
-  .fm-chat-mobile-top{ display:block; padding: 0.75rem 0.85rem 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .fm-chat-mobile-top{ 
+    display:block; 
+    padding: 0.75rem 0.85rem; 
+    border-bottom: 1px solid rgba(0,0,0,0.06); 
+    background: #fff;
+  }
 
   .fm-chat-wrap{
     flex: 1;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .fm-chat-area{
+    flex: 1;
     min-height: 0;
     overflow-y: auto;
     padding: 0.85rem 0.85rem 0.6rem;
@@ -399,8 +427,6 @@
     z-index: 10;
     padding: 0.75rem 0.85rem;
   }
-
+  
   .fm-conv-preview{ -webkit-line-clamp: 1; }
 }
-
-
