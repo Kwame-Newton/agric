@@ -85,6 +85,7 @@
 .fs-tab-btn:hover{
   background: rgba(45,106,79,0.08);
   border-color: rgba(45,106,79,0.12);
+  transform: translateX(3px);
 }
 
 .fs-tab-btn.active{
@@ -107,6 +108,18 @@
   border-radius: 16px;
   padding: 1.25rem;
   box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.fs-content-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--fs-green), #52B788);
 }
 
 .fs-card-title{
@@ -246,7 +259,7 @@
 
 .fs-toggle.on .fs-toggle-knob{
   left: 23px;
-  background: #ffffff;
+  background: var(--fs-green);
 }
 
 /* Table */
@@ -324,11 +337,17 @@
   background:#fff;
 }
 
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .fs-accordion-panel{
   padding: 0 0.95rem 0.95rem;
   color:#4a5c51;
   font-weight: 750;
   line-height: 1.6;
+  animation: slideDown 250ms ease-out forwards;
 }
 
 .fs-link{
@@ -437,5 +456,108 @@
   font-weight: 1000;
   color:#5f6b62;
   cursor:pointer;
+}
+
+/* Mobile Sidebar & Profile */
+@media (max-width: 767px) {
+  .fs-sidebar {
+    display: flex;
+    overflow-x: auto;
+    padding: 0.5rem;
+    white-space: nowrap;
+    border-radius: 12px;
+  }
+  .fs-sidebar-title {
+    display: none;
+  }
+  .fs-tab-btn {
+    flex: 0 0 auto;
+    width: auto;
+    justify-content: center;
+  }
+}
+
+.fs-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.fs-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--fs-green);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.fs-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.fs-profile-name {
+  font-size: 1.2rem;
+  font-weight: 950;
+  color: #163226;
+}
+
+.fs-profile-role {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(45,106,79,0.1);
+  color: var(--fs-green);
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  width: max-content;
+}
+
+.fs-profile-date {
+  font-size: 0.85rem;
+  color: #6b776f;
+  font-weight: 700;
+}
+
+.fs-pwd-strength {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.fs-pwd-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(0,0,0,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  max-width: 200px;
+}
+
+.fs-pwd-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.fs-pwd-fill.strength-1 { background: #dc2626; }
+.fs-pwd-fill.strength-2 { background: var(--fs-orange); }
+.fs-pwd-fill.strength-3 { background: var(--fs-green); }
+
+.fs-pwd-label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #6b776f;
 }
 

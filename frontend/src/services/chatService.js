@@ -350,3 +350,105 @@ export async function fetchAdminContactMessages() {
   }
   return all;
 }
+
+// ─── Registered Farmer Accounts for Verification ───
+const LOCAL_REGISTERED_FARMERS_KEY = 'agrilink_registered_farmers';
+
+export function getRegisteredFarmers() {
+  try {
+    const raw = localStorage.getItem(LOCAL_REGISTERED_FARMERS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error reading local registered farmers:', e);
+  }
+  return [];
+}
+
+export function saveRegisteredFarmers(farmers) {
+  try {
+    localStorage.setItem(LOCAL_REGISTERED_FARMERS_KEY, JSON.stringify(farmers));
+  } catch (e) {
+    console.error('Error saving local registered farmers:', e);
+  }
+}
+
+export function addRegisteredFarmer(farmerObj) {
+  const local = getRegisteredFarmers();
+  const updated = [farmerObj, ...local.filter((f) => f.id !== farmerObj.id)];
+  saveRegisteredFarmers(updated);
+}
+
+export async function fetchAllVerificationRequests() {
+  let dbFarmers = [];
+
+  try {
+    const { data: farmerData, error } = await supabase
+      .from('farmers')
+      .select('*, profiles(full_name, email, phone)')
+      .order('created_at', { ascending: false });
+
+    if (!error && farmerData) {
+      dbFarmers = farmerData.map((f) => ({
+        id: f.id,
+        farmerName: f.profiles?.full_name || 'Farmer',
+        email: f.profiles?.email || 'farmer@agrilink.com',
+        phone: f.profiles?.phone || '+233 24 000 0000',
+        farmName: f.farm_name || 'AgriLink Farm',
+        location: f.farm_location || 'Ghana',
+        dateSubmitted: f.created_at ? new Date(f.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        status: f.verification_status || 'pending',
+        cropSpecialty: f.primary_category || 'Vegetables',
+        farmSize: `${f.farm_size || 2} acres`,
+        farmDescription: f.farm_bio || 'Farmer account registered on AgriLink platform.',
+        documents: [
+          { name: `ID Type: ${f.id_type || 'National ID'} (${f.id_number || 'Provided'})`, type: 'id', submitted: true },
+          { name: 'Farm Account Details', type: 'land', submitted: true },
+        ],
+        notes: '',
+      }));
+    }
+  } catch (err) {
+    console.warn('Supabase fetch farmers verification error:', err);
+  }
+
+  // Get local registered farmers
+  const localFarmers = getRegisteredFarmers();
+
+  // Get contact form verification messages
+  const contactMsgs = await fetchAdminContactMessages();
+  const verificationMsgs = contactMsgs.filter(
+    (m) => m.subject && m.subject.toLowerCase().includes('verification')
+  );
+
+  const contactReqs = verificationMsgs.map((m, idx) => ({
+    id: m.id || `VR-CONTACT-${idx + 1}`,
+    farmerName: m.fullName || 'Farmer Request',
+    email: m.email || 'farmer@agrilink.com',
+    phone: '+233 24 000 0000',
+    farmName: m.fullName ? `${m.fullName}'s Farm` : 'AgriLink Farm',
+    location: 'Ghana',
+    dateSubmitted: m.createdAt
+      ? new Date(m.createdAt).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0],
+    status: m.status === 'resolved' ? 'approved' : m.status || 'pending',
+    cropSpecialty: 'Fresh Produce',
+    farmSize: '2 acres',
+    farmDescription: m.message || 'Verification request submitted from AgriLink contact form.',
+    documents: [
+      { name: 'National ID Card / Verification Request', type: 'id', submitted: true },
+      { name: 'Contact Form Message', type: 'land', submitted: true },
+    ],
+    notes: '',
+  }));
+
+  // Combine and deduplicate
+  const combined = [...localFarmers, ...dbFarmers, ...contactReqs];
+  const uniqueMap = new Map();
+  for (const item of combined) {
+    if (!uniqueMap.has(item.id)) {
+      uniqueMap.set(item.id, item);
+    }
+  }
+
+  return Array.from(uniqueMap.values());
+}

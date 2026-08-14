@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import {
   ChevronDown,
   ChevronUp,
@@ -8,6 +9,7 @@ import {
   Trash2,
   AlertTriangle,
   RotateCcw,
+  Lock,
 } from 'lucide-react';
 import './FarmerSettingsPage.css';
 
@@ -59,8 +61,11 @@ function formatDate(d) {
 }
 
 export default function FarmerSettingsPage() {
+  const { user } = useAuth();
+  
   const tabs = useMemo(
     () => [
+      { id: 'profile', label: 'Profile' },
       { id: 'account', label: 'Account' },
       { id: 'notifications', label: 'Notifications' },
       { id: 'privacy', label: 'Privacy & Security' },
@@ -71,7 +76,23 @@ export default function FarmerSettingsPage() {
     []
   );
 
-  const [activeTab, setActiveTab] = useState('account');
+  const [activeTab, setActiveTab] = useState('profile');
+
+  // ─── PROFILE ────────────────────────────────────────────────────────────────
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Farmer');
+  const [phone, setPhone] = useState(user?.user_metadata?.phone || '');
+  
+  function onSaveProfile(e) {
+    e.preventDefault();
+    showToast('Profile updated successfully.');
+  }
+
+  const initials = fullName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
 
   const [toastMsg, setToastMsg] = useState('');
   function showToast(message) {
@@ -107,6 +128,28 @@ export default function FarmerSettingsPage() {
 
   // ─── PRIVACY & SECURITY ────────────────────────────────────────────────────
   const [twoFactor, setTwoFactor] = useState(true);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
+  const passwordStrength = useMemo(() => {
+    if (!newPassword) return 0;
+    if (newPassword.length < 6) return 1;
+    if (newPassword.length < 10 && /^[a-zA-Z0-9]*$/.test(newPassword)) return 2;
+    return 3;
+  }, [newPassword]);
+
+  function onChangePassword(e) {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      showToast('New passwords do not match!');
+      return;
+    }
+    showToast('Password changed successfully.');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  }
 
   const mockLogins = useMemo(
     () => [
@@ -229,6 +272,59 @@ export default function FarmerSettingsPage() {
 
         {/* Content */}
         <div className="fs-content-card">
+          {activeTab === 'profile' && (
+            <>
+              <div className="fs-card-title">Profile</div>
+              <form className="fs-form" onSubmit={onSaveProfile}>
+                <div className="fs-profile-header">
+                  <div className="fs-avatar">{initials}</div>
+                  <div className="fs-profile-info">
+                    <div className="fs-profile-name">{fullName}</div>
+                    <div className="fs-profile-role">{user?.user_metadata?.role || 'Farmer'}</div>
+                    <div className="fs-profile-date">Member since {formatDate(user?.created_at || new Date())}</div>
+                  </div>
+                </div>
+                
+                <div className="fs-grid-2" style={{ marginTop: '0.5rem' }}>
+                  <Field label="Full Name">
+                    <input
+                      className="fs-input"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      type="text"
+                    />
+                  </Field>
+                  <Field label="Email Address">
+                    <input
+                      className="fs-input"
+                      value={user?.email || ''}
+                      type="email"
+                      disabled
+                      style={{ background: 'var(--fs-bg)', color: '#6b776f' }}
+                    />
+                  </Field>
+                </div>
+                <div className="fs-grid-2">
+                  <Field label="Phone Number">
+                    <input
+                      className="fs-input"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      type="text"
+                      placeholder="e.g. +233 20 123 4567"
+                    />
+                  </Field>
+                </div>
+
+                <div className="fs-form-actions">
+                  <button className="fs-save-btn" type="submit">
+                    <Save size={16} /> Save Profile
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
+
           {activeTab === 'account' && (
             <>
               <div className="fs-card-title">Account</div>
@@ -376,6 +472,59 @@ export default function FarmerSettingsPage() {
             <>
               <div className="fs-card-title">Privacy & Security</div>
               <form className="fs-form" onSubmit={onSavePrivacy}>
+                <div className="fs-card-title" style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>
+                  Change password
+                </div>
+                
+                <div className="fs-grid-2">
+                  <Field label="Current password">
+                    <input
+                      className="fs-input"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                    />
+                  </Field>
+                </div>
+                <div className="fs-grid-2">
+                  <Field label="New password">
+                    <input
+                      className="fs-input"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Confirm new password">
+                    <input
+                      className="fs-input"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </Field>
+                </div>
+                {newPassword && (
+                  <div className="fs-pwd-strength">
+                    <div className="fs-pwd-bar">
+                      <div 
+                        className={`fs-pwd-fill strength-${passwordStrength}`} 
+                        style={{ width: `${(passwordStrength / 3) * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="fs-pwd-label">
+                      {passwordStrength === 1 ? 'Weak' : passwordStrength === 2 ? 'Medium' : 'Strong'}
+                    </span>
+                  </div>
+                )}
+                <div className="fs-form-actions" style={{ marginBottom: '1rem' }}>
+                  <button type="button" className="fs-save-btn" onClick={onChangePassword}>
+                    <Lock size={16} /> Change Password
+                  </button>
+                </div>
+
+                <div className="fs-divider" />
+
                 <div className="fs-switch-row">
                   <div className="fs-switch-left">
                     <div className="fs-switch-title">Two factor authentication</div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Search, X, CheckCircle, AlertTriangle, Eye, Clock,
   MapPin, Mail, Phone, Calendar, FileText, Sprout,
@@ -6,6 +6,8 @@ import {
   Shield, ShieldCheck, ShieldX, Filter,
 } from 'lucide-react';
 import { AdminDashboardLayout } from './AdminDashboardPage';
+import { fetchAdminContactMessages, fetchAllVerificationRequests } from '../../services/chatService';
+import { supabase } from '../../supabaseClient';
 import './admin.css';
 
 /* ──────────────────────────────────────────────────────────
@@ -367,6 +369,21 @@ export default function AdminVerificationPage() {
   const [approveReq, setApproveReq] = useState(null);
   const [rejectReq, setRejectReq] = useState(null);
   const perPage = 8;
+
+  const loadRequests = useCallback(async () => {
+    try {
+      const liveReqs = await fetchAllVerificationRequests();
+      if (liveReqs && liveReqs.length > 0) {
+        setRequests(liveReqs);
+      }
+    } catch (e) {
+      console.warn('Error loading live verification requests:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
 
   /* Stats */
   const totalPending  = requests.filter(r => r.status === 'pending').length;

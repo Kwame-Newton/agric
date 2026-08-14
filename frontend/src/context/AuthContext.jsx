@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { addRegisteredFarmer } from '../services/chatService';
 
 const AuthContext = createContext();
 
@@ -234,10 +235,29 @@ export function AuthProvider({ children }) {
       const sessionUser = authData.user;
       if (!sessionUser) {
         // When email confirmation is enabled, Supabase may not return a session user immediately.
-        return { success: true, user: null, requiresVerification: true };
       }
- 
+
       if (data.role === 'farmer') {
+        const farmerReqObj = {
+          id: sessionUser?.id || `farmer-${Date.now()}`,
+          farmerName: data.fullName,
+          email: normalizedEmail,
+          phone: data.phone,
+          farmName: data.farmName || `${data.fullName}'s Farm`,
+          location: data.farmLocation || 'Ghana',
+          dateSubmitted: new Date().toISOString().split('T')[0],
+          status: 'pending',
+          cropSpecialty: data.primaryCategory || 'Vegetables',
+          farmSize: `${data.farmSize || 1} acres`,
+          farmDescription: data.farmBio || 'Newly registered farmer account pending admin verification.',
+          documents: [
+            { name: `ID: ${data.idType || 'National ID'} (${data.idNumber || 'Provided'})`, type: 'id', submitted: true },
+            { name: 'Farm Registration Details', type: 'land', submitted: true }
+          ],
+          notes: ''
+        };
+        addRegisteredFarmer(farmerReqObj);
+
         // Sign out immediately so they aren't logged in on the client
         await supabase.auth.signOut();
         return { success: true, user: null, requiresVerification: true };

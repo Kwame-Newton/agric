@@ -27,6 +27,8 @@ import AdminVerificationPage from './pages/admin/AdminVerificationPage';
 import AdminBuyersPage from './pages/admin/AdminBuyersPage';
 import AdminCropsPage from './pages/admin/AdminCropsPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminMessagesPage from './pages/admin/AdminMessagesPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
 function Layout({ children }) {
   return (
@@ -111,6 +113,25 @@ function App() {
             }
           />
 
+          {/* Admin - Messages & Enquiries */}
+          <Route
+            path="/admin/messages"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminMessagesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin - Settings */}
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminSettingsPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Marketplace - Protected, buyers only */}
           <Route
