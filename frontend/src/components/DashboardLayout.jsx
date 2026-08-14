@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }) {
       <aside className={`dashboard-sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-header">
           <Link to="/" className="sidebar-logo">
-            <Leaf className="sidebar-logo-icon" />
+            <img src="/favicon.jpg" alt="AgriLink Logo" style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'cover' }} />
             <span>AgriLink</span>
           </Link>
           <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)}>

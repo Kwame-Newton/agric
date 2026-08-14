@@ -329,7 +329,7 @@ export default function FarmBlogFeedPage() {
         <div className="blog-navbar-main">
           {/* Left Side: Logo */}
           <Link to="/" className="blog-logo">
-            <Leaf className="blog-logo-icon" />
+            <img src="/favicon.jpg" alt="AgriLink Logo" style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover' }} />
             <span className="blog-logo-text">AgriLink</span>
           </Link>
 

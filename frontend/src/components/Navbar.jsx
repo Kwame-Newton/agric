@@ -40,7 +40,7 @@ export default function Navbar() {
     <nav className={`navbar ${isScrolled ? 'navbar-scrolled' : ''}`}>
       <div className="container nav-container">
         <Link to="/" className="logo">
-          <Leaf className="logo-icon" />
+          <img src="/favicon.jpg" alt="AgriLink Logo" className="logo-icon-img" style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'cover' }} />
           <span>AgriLink</span>
         </Link>
 
