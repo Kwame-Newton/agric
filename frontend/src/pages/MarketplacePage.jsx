@@ -291,25 +291,25 @@ const allProducts = [
   {
     id: 'demo-1', name: 'Fresh Tomatoes', farm: 'Green Valley Farms', location: 'Kumasi, Ashanti', farmer_id: 'farmer-1',
     price: 12, unit: 'kg', category: 'vegetables', rating: 4.8, reviews: 319,
-    image: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=400&q=70',
+    image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: 'Best Seller', description: 'Fresh, organic greenhouse tomatoes harvested daily.'
   },
   {
     id: 'demo-2', name: 'Red Pepper', farm: 'Ama Organic Farm', location: 'Ejisu, Ashanti', farmer_id: 'farmer-2',
     price: 15, unit: 'kg', category: 'vegetables', rating: 4.7, reviews: 196,
-    image: 'https://images.unsplash.com/photo-1562967916-eb82221dfb35?auto=format&fit=crop&w=400&q=70',
+    image: 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: '', description: 'Spicy, vibrant red peppers carefully sorted.'
   },
   {
     id: 'demo-3', name: 'Fresh Maize', farm: 'Happy Farm', location: 'Ejisu, Ashanti', farmer_id: 'farmer-3',
     price: 8, unit: 'kg', category: 'grains', rating: 4.4, reviews: 110,
-    image: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=400&q=70',
+    image: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: '', description: 'Sweet corn maize freshly harvested from Ejisu fields.'
   },
   {
     id: 'demo-4', name: 'Cassava', farm: 'Nkompong Farm', location: 'Kumasi, Ashanti', farmer_id: 'farmer-4',
     price: 6, unit: 'kg', category: 'tubers', rating: 4.5, reviews: 98,
-    image: 'https://images.unsplash.com/photo-1524592412331-4fe04e37381d?auto=format&fit=crop&w=400&q=70',
+    image: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=400&q=70',
     inStock: true, badge: '', description: 'High-yield fresh cassava roots ideal for local markets.'
   },
 ];

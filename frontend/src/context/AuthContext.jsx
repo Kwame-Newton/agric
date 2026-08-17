@@ -207,7 +207,7 @@ export function AuthProvider({ children }) {
         email: normalizedEmail,
         password: data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/login`,
+          emailRedirectTo: `${window.location.origin}/login?confirmed=true`,
           data: {
             full_name: data.fullName,
             phone: data.phone,
@@ -233,9 +233,6 @@ export function AuthProvider({ children }) {
       }
 
       const sessionUser = authData.user;
-      if (!sessionUser) {
-        // When email confirmation is enabled, Supabase may not return a session user immediately.
-      }
 
       if (data.role === 'farmer') {
         const farmerReqObj = {
@@ -257,13 +254,19 @@ export function AuthProvider({ children }) {
           notes: ''
         };
         addRegisteredFarmer(farmerReqObj);
-
-        // Sign out immediately so they aren't logged in on the client
-        await supabase.auth.signOut();
-        return { success: true, user: null, requiresVerification: true };
       }
 
-      return { success: true, user: sessionUser };
+      // Always sign out after registration so user is prompted to check email & log in after clicking confirmation link
+      await supabase.auth.signOut();
+      setUser(null);
+      localStorage.removeItem('agrilink_user');
+
+      return {
+        success: true,
+        email: normalizedEmail,
+        requiresVerification: true,
+        role: data.role
+      };
     } catch (err) {
       return { success: false, error: err.message || 'An unexpected error occurred during registration' };
     }

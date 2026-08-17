@@ -111,7 +111,7 @@ export default function LandingPage() {
                 id: 'pepper',
                 name: 'Red Pepper',
                 price: '₵15',
-                image: 'https://images.unsplash.com/photo-1562967916-eb82221dfb35?auto=format&fit=crop&w=800&q=70',
+                image: 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=800&q=70',
                 cta: '/register',
               },
               {
@@ -125,13 +125,23 @@ export default function LandingPage() {
                 id: 'cassava',
                 name: 'Cassava',
                 price: '₵6',
-                image: 'https://images.unsplash.com/photo-1524592412331-4fe04e37381d?auto=format&fit=crop&w=800&q=70',
+                image: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=800&q=70',
                 cta: '/register',
               },
             ].map((crop) => (
               <div key={crop.id} className="featured-crop-card">
                 <div className="featured-crop-img-wrap">
-                  <img src={crop.image} alt={crop.name} className="featured-crop-img" />
+                  <img
+                    src={crop.image}
+                    alt={crop.name}
+                    className="featured-crop-img"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      const emoji = crop.name.includes('Tomat') ? '🍅' : crop.name.includes('Pepper') ? '🌶️' : crop.name.includes('Maize') ? '🌽' : '🥔';
+                      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2D6A4F"/><stop offset="100%" stop-color="#52B788"/></linearGradient></defs><rect width="400" height="300" fill="url(#g)"/><text x="50%" y="45%" text-anchor="middle" font-size="72">${emoji}</text><text x="50%" y="75%" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="24" fill="#ffffff">${crop.name}</text></svg>`;
+                      e.target.src = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+                    }}
+                  />
                 </div>
                 <div className="featured-crop-body">
                   <div className="featured-crop-name">{crop.name}</div>

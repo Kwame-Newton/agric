@@ -71,17 +71,14 @@ export default function RegisterPage() {
       ...(role === 'buyer' && { buyerType, deliveryAddress, paymentMethod }),
     };
 
-    // Register and auto-login
+    // Register and handle confirmation email alert
     const result = await register(regData);
     
     if (result.success) {
-      console.log('Registration successful:', result.user);
-      if (result.requiresVerification) {
-        setVerificationType(role === 'farmer' ? 'adminVerification' : 'emailConfirmation');
-        setIsPendingVerification(true);
-        setIsLoading(false);
-      }
-      // Redirect will happen via useEffect for auto-logged in buyers
+      console.log('Registration successful:', result);
+      setVerificationType(role === 'farmer' ? 'adminVerification' : 'emailConfirmation');
+      setIsPendingVerification(true);
+      setIsLoading(false);
     } else {
       setError(result.error || 'Registration failed');
       setIsLoading(false);
@@ -140,42 +137,76 @@ export default function RegisterPage() {
         <div className="auth-form-panel">
           <div className="auth-form-wrapper register-wrapper">
             {isPendingVerification ? (
-              <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+              <div style={{ textAlign: 'center', padding: '2.5rem 1.25rem' }}>
                 <div style={{
-                  width: '64px',
-                  height: '64px',
-                  background: 'rgba(46, 125, 50, 0.1)',
+                  width: '72px',
+                  height: '72px',
+                  background: 'rgba(46, 125, 50, 0.12)',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   margin: '0 auto 1.5rem',
-                  color: '#2e7d32'
+                  color: '#2e7d32',
+                  boxShadow: '0 8px 24px rgba(46, 125, 50, 0.15)'
                 }}>
-                  <ShieldCheck size={36} />
+                  <Mail size={38} />
                 </div>
-                <h2 className="heading-md" style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Registration Successful!</h2>
-                {verificationType === 'adminVerification' ? (
-                  <>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.6', fontSize: '0.95rem' }}>
-                      Your farmer profile has been created successfully. Since safety and verification are our top priorities, <strong>your account is pending admin verification</strong>.
-                    </p>
-                    <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.875rem', lineHeight: '1.5' }}>
-                      You will receive a notification email once the administrator reviews and approves your farm details and credentials.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.6', fontSize: '0.95rem' }}>
-                      Your account has been created successfully. Please check your email and <strong>confirm your address</strong> before logging in.
-                    </p>
-                    <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.875rem', lineHeight: '1.5' }}>
-                      A confirmation link has been sent to the address you provided. After confirming your email, return to the login page to access your account.
-                    </p>
-                  </>
+
+                <h2 className="heading-md" style={{ marginBottom: '0.75rem', color: 'var(--text-primary)', fontWeight: 800 }}>
+                  Account Created Successfully!
+                </h2>
+
+                <div style={{
+                  background: '#f0fdf4',
+                  border: '1.5px solid #86efac',
+                  borderRadius: '12px',
+                  padding: '1.25rem',
+                  marginBottom: '1.5rem',
+                  textAlign: 'left'
+                }}>
+                  <p style={{ color: '#166534', fontWeight: 800, fontSize: '0.95rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ShieldCheck size={20} color="#16a34a" /> Confirmation Email Sent
+                  </p>
+                  <p style={{ color: '#1e293b', fontSize: '0.92rem', lineHeight: '1.6', margin: 0 }}>
+                    A confirmation email has been sent to <strong>{email}</strong>.
+                  </p>
+                  <p style={{ color: '#334155', fontSize: '0.88rem', lineHeight: '1.6', marginTop: '0.75rem', marginBottom: 0 }}>
+                    Please check your email inbox and click the confirmation link inside. <strong>The link will automatically redirect you back here to log in</strong> to your AgriLink account.
+                  </p>
+                </div>
+
+                {role === 'farmer' && (
+                  <div style={{
+                    background: '#fffbeb',
+                    border: '1px solid #fde68a',
+                    borderRadius: '10px',
+                    padding: '0.85rem 1rem',
+                    marginBottom: '1.5rem',
+                    textAlign: 'left',
+                    fontSize: '0.85rem',
+                    color: '#92400e'
+                  }}>
+                    ℹ️ <strong>Note for Farmers:</strong> After confirming your email, your farm details will also be reviewed by our admin team for verification.
+                  </div>
                 )}
-                <Link to="/login" className="btn btn-primary w-full" style={{ display: 'block', textDecoration: 'none', textAlign: 'center', padding: '0.85rem' }}>
-                  Return to Login
+
+                <Link 
+                  to="/login" 
+                  className="btn btn-primary w-full" 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    textDecoration: 'none', 
+                    textAlign: 'center', 
+                    padding: '0.9rem',
+                    fontSize: '0.98rem',
+                    fontWeight: 700
+                  }}
+                >
+                  Proceed to Login Page
                 </Link>
               </div>
             ) : (

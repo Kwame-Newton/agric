@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Leaf, Lock, Mail, User, AlertCircle, X, CheckCircle, Send } from 'lucide-react';
 import GoogleAuthModal from '../components/GoogleAuthModal';
 import { useAuth } from '../context/AuthContext';
@@ -101,6 +101,8 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isConfirmed = searchParams.get('confirmed') === 'true' || window.location.hash.includes('access_token');
   const { login, user } = useAuth();
 
   // Redirect if already logged in
@@ -219,6 +221,26 @@ export default function LoginPage() {
             <div className="auth-separator">
               <span className="separator-text">or sign in with email</span>
             </div>
+
+            {/* Email Confirmation Success Message */}
+            {isConfirmed && (
+              <div style={{
+                padding: '14px 16px',
+                background: '#f0fdf4',
+                border: '1.5px solid #86efac',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                gap: '10px',
+                marginBottom: '16px',
+                alignItems: 'center',
+                color: '#166534',
+                fontWeight: 700,
+                fontSize: '0.9rem'
+              }}>
+                <CheckCircle size={20} color="#16a34a" style={{ flexShrink: 0 }} />
+                <span>Email confirmed successfully! You can now log in to your account below.</span>
+              </div>
+            )}
 
             {/* Error Message */}
             {error && (
