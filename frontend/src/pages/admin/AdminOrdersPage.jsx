@@ -181,7 +181,7 @@ function OrderDetailModal({ order, open, onClose, onUpdateStatus }) {
                 <div key={i} className="ao-item-row">
                   <div className="ao-item-left">
                     <img
-                      src={item.image || item.image_url || 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=150&q=70'}
+                      src={item.image || item.image_url || 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=150&q=70'}
                       alt={item.name}
                       className="ao-item-img"
                     />

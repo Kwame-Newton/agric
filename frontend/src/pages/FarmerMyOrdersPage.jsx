@@ -108,7 +108,7 @@ export default function FarmerMyOrdersPage() {
           {
             name: 'Farm Produce Batch',
             category: 'Produce',
-            image: 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=300&q=70',
+            image: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=300&q=70',
             unit: 'kg',
             quantity: 1,
             unit_price: Number(o.total_amount) || 0
@@ -330,7 +330,7 @@ export default function FarmerMyOrdersPage() {
                       <div className="fm-orders-crop-cell">
                         <img
                           className="fm-orders-crop-thumb"
-                          src={mainItem.image || 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=300&q=70'}
+                          src={mainItem.image || 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=300&q=70'}
                           alt={mainItem.name || 'Crop'}
                         />
                         <div>
@@ -413,7 +413,7 @@ export default function FarmerMyOrdersPage() {
                     <div key={i} className="fm-orders-crop-big" style={{ marginBottom: i < selectedOrder.items.length - 1 ? '10px' : 0 }}>
                       <img
                         className="fm-orders-crop-big-thumb"
-                        src={item.image || 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=300&q=70'}
+                        src={item.image || 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=300&q=70'}
                         alt={item.name}
                       />
                       <div>

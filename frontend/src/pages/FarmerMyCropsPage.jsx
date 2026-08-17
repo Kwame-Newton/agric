@@ -45,10 +45,10 @@ function normalizeNumber(value) {
 }
 
 const FALLBACK_IMAGES = {
-  Vegetables: 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&w=300&q=70',
+  Vegetables: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=300&q=70',
   Fruits:     'https://images.unsplash.com/photo-1547514701-42782101795e?auto=format&fit=crop&w=300&q=70',
   Grains:     'https://images.unsplash.com/photo-1577449923886-df3d846797af?auto=format&fit=crop&w=300&q=70',
-  Tubers:     'https://images.unsplash.com/photo-1631207558636-d24c18bcfd6e?auto=format&fit=crop&w=300&q=70',
+  Tubers:     'https://images.unsplash.com/photo-1524592412331-4fe04e37381d?auto=format&fit=crop&w=300&q=70',
   Spices:     'https://images.unsplash.com/photo-1583119022894-919a68a3d0e3?auto=format&fit=crop&w=300&q=70',
 };
 
