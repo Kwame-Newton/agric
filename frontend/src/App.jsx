@@ -133,6 +133,7 @@ function App() {
             }
           />
 
+
           {/* Marketplace - Protected, buyers only */}
           <Route
             path="/marketplace"

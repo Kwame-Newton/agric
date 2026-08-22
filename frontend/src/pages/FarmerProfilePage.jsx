@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Eye, Lock, Save, AlertTriangle, Loader2, CheckCircle } from 'lucide-react';
+import { ShieldCheck, Eye, Lock, Save, AlertTriangle, Loader2, CheckCircle, CreditCard, Smartphone, Building, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import './FarmerProfilePage.css';
@@ -56,6 +56,13 @@ export default function FarmerProfilePage() {
   // Editable form state
   const [farmInfo, setFarmInfo] = useState({ farmName: '', bio: '', location: '', primaryCategory: 'vegetables' });
   const [personalInfo, setPersonalInfo] = useState({ fullName: '', phone: '', region: 'Ashanti' });
+  const [paymentDetails, setPaymentDetails] = useState({
+    paymentMethod: 'mtn_momo',
+    mobileMoneyNumber: '',
+    mobileMoneyName: '',
+    bankName: '',
+    paystackRecipientCode: '',
+  });
   const [passwords, setPasswords] = useState({ newPassword: '', confirmNewPassword: '' });
   const [pwError, setPwError] = useState('');
 
@@ -117,6 +124,13 @@ export default function FarmerProfilePage() {
         phone: prof?.phone || '',
         region: farmer?.farm_location?.split(',')?.[1]?.trim() || 'Ashanti',
       });
+      setPaymentDetails({
+        paymentMethod: farmer?.payment_method || 'mtn_momo',
+        mobileMoneyNumber: farmer?.mobile_money_number || prof?.phone || '',
+        mobileMoneyName: farmer?.mobile_money_name || prof?.full_name || '',
+        bankName: farmer?.bank_name || '',
+        paystackRecipientCode: farmer?.paystack_recipient_code || '',
+      });
     } catch (err) {
       console.error('Error loading profile:', err);
     } finally {
@@ -165,6 +179,60 @@ export default function FarmerProfilePage() {
       showToast('Personal information updated.');
     } catch (err) {
       showToast(err.message || 'Failed to save.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Save Payment & Mobile Money details (Paystack Recipient) ─────────────
+  const onSavePaymentDetails = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      let recipientCode = paymentDetails.paystackRecipientCode;
+
+      // 1. Call Backend API to register Paystack Transfer Recipient
+      try {
+        const res = await fetch('http://localhost:4000/api/payments/recipient', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            farmer_id: user.id,
+            payment_method: paymentDetails.paymentMethod,
+            mobile_money_number: paymentDetails.mobileMoneyNumber,
+            mobile_money_name: paymentDetails.mobileMoneyName,
+            bank_name: paymentDetails.bankName,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.recipient_code) {
+            recipientCode = data.recipient_code;
+            setPaymentDetails(s => ({ ...s, paystackRecipientCode: recipientCode }));
+          }
+        }
+      } catch (apiErr) {
+        console.warn('Backend payment recipient API unavailable, updating directly to Supabase:', apiErr);
+      }
+
+      // 2. Update Supabase farmers table
+      const { error } = await supabase
+        .from('farmers')
+        .update({
+          payment_method: paymentDetails.paymentMethod,
+          mobile_money_number: paymentDetails.mobileMoneyNumber,
+          mobile_money_name: paymentDetails.mobileMoneyName,
+          bank_name: paymentDetails.bankName,
+          paystack_recipient_code: recipientCode,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      showToast('Payment & Mobile Money payout details updated successfully!');
+      loadProfile();
+    } catch (err) {
+      showToast(err.message || 'Failed to save payment details.', 'error');
     } finally {
       setSaving(false);
     }
@@ -373,6 +441,111 @@ export default function FarmerProfilePage() {
                 <button className="fp-save-btn" type="submit" disabled={saving}>
                   {saving ? <Loader2 size={16} className="fp-spin" /> : <Save size={16} />}
                   Save Personal Info
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Payment & Mobile Money Setup (Paystack Escrow Payouts) */}
+          <div className="fp-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div className="fp-card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CreditCard size={18} color="#2D6A4F" /> Payout & Mobile Money Details
+              </div>
+              <span className={`fp-paystack-status ${paymentDetails.paystackRecipientCode ? 'fp-paystack-connected' : 'fp-paystack-unconnected'}`}>
+                <CheckCircle2 size={13} />
+                {paymentDetails.paystackRecipientCode ? 'Paystack Connected' : 'Setup Required'}
+              </span>
+            </div>
+
+            <div className="fp-payment-banner">
+              <Smartphone size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <strong>AgriLink Escrow Payout Guarantee:</strong> When a buyer confirms delivery of your crops, AgriLink automatically releases your earnings directly to this account via Paystack Transfer API.
+              </div>
+            </div>
+
+            <form className="fp-form" onSubmit={onSavePaymentDetails}>
+              <div>
+                <span className="fp-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Preferred Payment Method</span>
+                <div className="fp-payment-grid">
+                  {[
+                    { id: 'mtn_momo', label: 'MTN Mobile Money' },
+                    { id: 'telecel_cash', label: 'Telecel Cash' },
+                    { id: 'airteltigo', label: 'AirtelTigo Money' },
+                    { id: 'bank', label: 'Bank Account' },
+                  ].map(m => (
+                    <label
+                      key={m.id}
+                      className={`fp-payment-choice ${paymentDetails.paymentMethod === m.id ? 'selected' : ''}`}
+                    >
+                      <input
+                        type="radio"
+                        name="farmerPaymentMethod"
+                        checked={paymentDetails.paymentMethod === m.id}
+                        onChange={() => setPaymentDetails(s => ({ ...s, paymentMethod: m.id }))}
+                      />
+                      <span>{m.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <Field label={paymentDetails.paymentMethod === 'bank' ? 'Bank Account Number' : 'Mobile Money Number'}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {paymentDetails.paymentMethod !== 'bank' && (
+                    <span style={{
+                      padding: '0.75rem 0.9rem', background: '#f3f4f6', borderRadius: '10px',
+                      fontWeight: 800, color: '#374151', border: '1px solid #d1d5db', display: 'flex', alignItems: 'center'
+                    }}>
+                      +233
+                    </span>
+                  )}
+                  <input
+                    className="fp-input"
+                    value={paymentDetails.mobileMoneyNumber}
+                    onChange={e => setPaymentDetails(s => ({ ...s, mobileMoneyNumber: e.target.value }))}
+                    type="text"
+                    placeholder={paymentDetails.paymentMethod === 'bank' ? 'Enter 13-digit account number' : '024 123 4567'}
+                    required
+                  />
+                </div>
+              </Field>
+
+              <Field label="Name on Account (Account Holder)">
+                <input
+                  className="fp-input"
+                  value={paymentDetails.mobileMoneyName}
+                  onChange={e => setPaymentDetails(s => ({ ...s, mobileMoneyName: e.target.value }))}
+                  type="text"
+                  placeholder="e.g. Kwame Mensah (Matches registered MoMo name)"
+                  required
+                />
+              </Field>
+
+              {paymentDetails.paymentMethod === 'bank' && (
+                <Field label="Bank Name">
+                  <input
+                    className="fp-input"
+                    value={paymentDetails.bankName}
+                    onChange={e => setPaymentDetails(s => ({ ...s, bankName: e.target.value }))}
+                    type="text"
+                    placeholder="e.g. GCB Bank, Ecobank Ghana, Stanbic"
+                    required
+                  />
+                </Field>
+              )}
+
+              {paymentDetails.paystackRecipientCode && (
+                <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
+                  Paystack Recipient ID: <code style={{ color: '#2D6A4F', fontWeight: 700 }}>{paymentDetails.paystackRecipientCode}</code>
+                </div>
+              )}
+
+              <div className="fp-form-actions">
+                <button className="fp-save-btn" type="submit" disabled={saving}>
+                  {saving ? <Loader2 size={16} className="fp-spin" /> : <Save size={16} />}
+                  Save Payment Details
                 </button>
               </div>
             </form>

@@ -46,25 +46,20 @@ export default function Navbar() {
 
         {/* Desktop Links */}
         <div className="nav-links">
-          <a href="/" className="nav-link ">Home</a>
+          <Link to="/" className="nav-link">Home</Link>
           {user?.role === 'buyer' && (
             <>
-              <Link to="/marketplace" className="nav-link">
-                Marketplace
-              </Link>
-              <Link to="/blog" className="nav-link">
-                Farm Blog
-              </Link>
+              <Link to="/marketplace" className="nav-link">Marketplace</Link>
+              <Link to="/blog" className="nav-link">Farm Blog</Link>
             </>
           )}
+          {user?.role === 'farmer' && (
+            <Link to="/dashboard" className="nav-link">Farmer Dashboard</Link>
+          )}
           {user?.role === 'admin' && (
-            <Link to="/admin/dashboard" className="nav-link">
-              Admin Portal
-            </Link>
+            <Link to="/admin/dashboard" className="nav-link">Admin Portal</Link>
           )}
           <Link to="/contact" className="nav-link">Contact</Link>
-          <a href="#features" className="nav-link">Features</a>
-          <a href="#how-it-works" className="nav-link">How it works</a>
         </div>
 
         <div className="nav-actions">

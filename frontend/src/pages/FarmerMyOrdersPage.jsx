@@ -95,31 +95,43 @@ export default function FarmerMyOrdersPage() {
         return false;
       });
 
-      const formatted = relevant.map(o => ({
-        id: o.id || o.order_number,
-        order_number: o.order_number || `ORD-${String(o.id).slice(0, 6)}`,
-        buyer: {
-          name: o.buyer_name || o.buyer?.name || o.phone || 'Marketplace Buyer',
-          email: o.buyer_email || o.buyer?.email || 'N/A',
-          phone: o.phone || o.buyer?.phone || 'N/A',
-          deliveryAddress: o.delivery_address || o.buyer?.deliveryAddress || 'N/A',
-        },
-        items: Array.isArray(o.items) && o.items.length > 0 ? o.items : [
-          {
-            name: 'Farm Produce Batch',
-            category: 'Produce',
-            image: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=300&q=70',
-            unit: 'kg',
-            quantity: 1,
-            unit_price: Number(o.total_amount) || 0
-          }
-        ],
-        totalPrice: Number(o.total_amount || o.totalPrice) || 0,
-        paymentMethod: o.payment_method || o.paymentMethod || 'Mobile Money',
-        paymentStatus: 'Paid',
-        date: o.created_at ? new Date(o.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
-        status: (o.status || 'pending').toLowerCase(),
-      }));
+      const formatted = relevant.map(o => {
+        const total = Number(o.total_amount || o.totalPrice) || 0;
+        const commRate = o.commission_rate || 0.05;
+        const commAmt = o.commission_amount || Number((total * commRate).toFixed(2));
+        const farmerPayout = o.farmer_amount || Number((total - commAmt).toFixed(2));
+
+        return {
+          id: o.id || o.order_number,
+          order_number: o.order_number || `ORD-${String(o.id).slice(0, 6)}`,
+          buyer: {
+            name: o.buyer_name || o.buyer?.name || o.phone || 'Marketplace Buyer',
+            email: o.buyer_email || o.buyer?.email || 'N/A',
+            phone: o.phone || o.buyer?.phone || 'N/A',
+            deliveryAddress: o.delivery_address || o.buyer?.deliveryAddress || 'N/A',
+          },
+          items: Array.isArray(o.items) && o.items.length > 0 ? o.items : [
+            {
+              name: 'Farm Produce Batch',
+              category: 'Produce',
+              image: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=300&q=70',
+              unit: 'kg',
+              quantity: 1,
+              unit_price: total
+            }
+          ],
+          totalPrice: total,
+          commissionAmount: commAmt,
+          farmerPayout: farmerPayout,
+          paymentMethod: o.payment_method || o.paymentMethod || 'Mobile Money (Escrow)',
+          deliveryMethod: o.delivery_method || o.deliveryMethod || 'farmer_deliver',
+          paymentStatus: o.payment_status || 'paid',
+          escrowStatus: o.escrow_status || (o.status === 'confirmed' ? 'released' : 'held'),
+          transferCode: o.paystack_transfer_code || null,
+          date: o.created_at ? new Date(o.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+          status: (o.status || 'pending').toLowerCase(),
+        };
+      });
 
       setOrders(formatted);
     } catch {
@@ -138,14 +150,14 @@ export default function FarmerMyOrdersPage() {
   const stats = useMemo(() => {
     const total = orders.length;
     const totalEarnings = orders
-      .filter(o => o.status === 'delivered')
-      .reduce((acc, o) => acc + (o.totalPrice || 0), 0);
+      .filter(o => o.status === 'delivered' || o.status === 'confirmed')
+      .reduce((acc, o) => acc + (o.farmerPayout || o.totalPrice || 0), 0);
 
     return {
       total,
       pending: orders.filter(o => o.status === 'pending').length,
-      processing: orders.filter(o => o.status === 'processing' || o.status === 'confirmed').length,
-      delivered: orders.filter(o => o.status === 'delivered').length,
+      processing: orders.filter(o => o.status === 'processing').length,
+      delivered: orders.filter(o => o.status === 'delivered' || o.status === 'confirmed').length,
       earnings: totalEarnings,
     };
   }, [orders]);
@@ -177,7 +189,21 @@ export default function FarmerMyOrdersPage() {
     const normStatus = nextStatus.toLowerCase();
     setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, status: normStatus } : o)));
 
-    // Update in localStorage
+    // 1. Call Backend API to register delivery progress
+    try {
+      const res = await fetch(`http://localhost:4000/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: normStatus }),
+      });
+      if (res.ok && normStatus === 'delivered') {
+        alert('Order marked as Delivered! The buyer has been notified to confirm receipt and release your Mobile Money payout.');
+      }
+    } catch (apiErr) {
+      console.warn('Backend order status update note:', apiErr);
+    }
+
+    // 2. Update in localStorage
     try {
       const localOrders = JSON.parse(localStorage.getItem('agrilink_orders') || '[]');
       const updatedLocal = localOrders.map(o => {
@@ -191,10 +217,11 @@ export default function FarmerMyOrdersPage() {
       console.warn('Error updating local order status:', e);
     }
 
+    // 3. Update Supabase
     try {
       await supabase
         .from('orders')
-        .update({ status: normStatus })
+        .update({ status: normStatus, ...(normStatus === 'delivered' ? { delivered_at: new Date().toISOString() } : {}) })
         .eq('id', orderId);
     } catch {
       // Local state retained
@@ -405,6 +432,14 @@ export default function FarmerMyOrdersPage() {
                   <div className="fm-orders-detail-row"><strong>Email:</strong> {selectedOrder.buyer.email}</div>
                   <div className="fm-orders-detail-row"><strong>Phone:</strong> {selectedOrder.buyer.phone}</div>
                   <div className="fm-orders-detail-row"><strong>Delivery Address:</strong> {selectedOrder.buyer.deliveryAddress}</div>
+                  <div className="fm-orders-detail-row">
+                    <strong>Delivery Method:</strong>{' '}
+                    {selectedOrder.deliveryMethod === 'farm_pickup'
+                      ? 'I will pick up from farm'
+                      : selectedOrder.deliveryMethod === 'agrilink_partner'
+                      ? 'Request AgriLink delivery partner (available in selected areas)'
+                      : 'Farmer will deliver (coordinate via chat)'}
+                  </div>
                 </div>
 
                 <div className="fm-orders-detail-card">
@@ -426,9 +461,37 @@ export default function FarmerMyOrdersPage() {
                 </div>
 
                 <div className="fm-orders-detail-card">
-                  <div className="fm-orders-detail-title">Payment & Financial Summary</div>
-                  <div className="fm-orders-detail-row"><strong>Total Earnings:</strong> <span style={{ color: '#059669', fontWeight: 800 }}>GH₵ {selectedOrder.totalPrice}</span></div>
-                  <div className="fm-orders-detail-row"><strong>Payment Method:</strong> {selectedOrder.paymentMethod}</div>
+                  <div className="fm-orders-detail-title">Payment & Escrow Summary</div>
+                  <div className="fm-orders-detail-row">
+                    <span>Buyer Total:</span>
+                    <span>GH₵ {selectedOrder.totalPrice.toFixed(2)}</span>
+                  </div>
+                  <div className="fm-orders-detail-row" style={{ color: '#6b7280', fontSize: '0.82rem' }}>
+                    <span>AgriLink Fee (5%):</span>
+                    <span>-GH₵ {selectedOrder.commissionAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="fm-orders-detail-row" style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.4rem' }}>
+                    <strong>Your Net Earnings:</strong>
+                    <span style={{ color: '#059669', fontWeight: 900, fontSize: '1.05rem' }}>
+                      GH₵ {selectedOrder.farmerPayout.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="fm-orders-detail-row">
+                    <span>Escrow Status:</span>
+                    <span style={{ fontWeight: 700, color: selectedOrder.status === 'confirmed' ? '#15803d' : '#0369a1' }}>
+                      {selectedOrder.status === 'confirmed'
+                        ? '✓ Disbursed to Mobile Money'
+                        : selectedOrder.status === 'delivered'
+                        ? '🚚 Awaiting Buyer Confirmation'
+                        : '🔒 Secured in AgriLink Escrow'}
+                    </span>
+                  </div>
+                  {selectedOrder.transferCode && (
+                    <div className="fm-orders-detail-row" style={{ fontSize: '0.78rem', color: '#6b7280' }}>
+                      <span>Transfer Ref:</span>
+                      <code>{selectedOrder.transferCode}</code>
+                    </div>
+                  )}
                   <div className="fm-orders-detail-row"><strong>Date Placed:</strong> {selectedOrder.date}</div>
                   <div className="fm-orders-detail-row"><strong>Status:</strong> <StatusBadge status={selectedOrder.status} /></div>
                 </div>

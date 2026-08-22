@@ -138,31 +138,63 @@ function OrderDetailModal({ order, open, onClose, onUpdateStatus }) {
                 <span className="ao-info-label">Address:</span>
                 <span className="ao-info-value">{order.delivery_address || 'N/A'}</span>
               </div>
+              <div className="ao-info-row">
+                <span className="ao-info-label">Fulfillment:</span>
+                <span className="ao-info-value">
+                  {order.delivery_method === 'farm_pickup'
+                    ? 'Pick up from farm'
+                    : order.delivery_method === 'agrilink_partner'
+                    ? 'AgriLink delivery partner'
+                    : 'Farmer deliver'}
+                </span>
+              </div>
             </div>
 
-            {/* Supplier */}
+            {/* Supplier & Escrow */}
             <div className="ao-info-card">
               <div className="ao-info-card-title">
-                <Sprout size={17} /> Supplier &amp; Payment
+                <Sprout size={17} /> Escrow &amp; Payout Summary
               </div>
               <div className="ao-info-row">
                 <span className="ao-info-label">Farmer:</span>
                 <span className="ao-info-value">{order.farmer_name || 'AgriLink Partner'}</span>
               </div>
               <div className="ao-info-row">
-                <span className="ao-info-label">Method:</span>
-                <span className="ao-info-value">{order.payment_method || 'Mobile Money'}</span>
+                <span className="ao-info-label">Payment:</span>
+                <span className="ao-info-value">{order.payment_method || 'Paystack Escrow'}</span>
               </div>
               <div className="ao-info-row">
-                <span className="ao-info-label">Status:</span>
+                <span className="ao-info-label">Escrow:</span>
                 <span className="ao-info-value">
-                  <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '6px', fontWeight: 800, fontSize: '0.76rem' }}>
-                    {order.payment_status || 'Paid'}
+                  <span style={{
+                    background: (order.status === 'confirmed' || order.escrow_status === 'released') ? '#dcfce7' : '#e0f2fe',
+                    color: (order.status === 'confirmed' || order.escrow_status === 'released') ? '#15803d' : '#0369a1',
+                    padding: '2px 8px', borderRadius: '6px', fontWeight: 800, fontSize: '0.76rem'
+                  }}>
+                    {order.status === 'confirmed' || order.escrow_status === 'released' ? 'Released' : 'Held in Escrow'}
                   </span>
                 </span>
               </div>
               <div className="ao-info-row">
-                <span className="ao-info-label">Total:</span>
+                <span className="ao-info-label">Platform Fee (5%):</span>
+                <span className="ao-info-value" style={{ color: '#059669', fontWeight: 800 }}>
+                  GH₵ {Number(order.commission_amount || (order.total_amount * 0.05)).toFixed(2)}
+                </span>
+              </div>
+              <div className="ao-info-row">
+                <span className="ao-info-label">Farmer Payout:</span>
+                <span className="ao-info-value" style={{ color: '#111827', fontWeight: 800 }}>
+                  GH₵ {Number(order.farmer_amount || (order.total_amount * 0.95)).toFixed(2)}
+                </span>
+              </div>
+              {order.paystack_transfer_code && (
+                <div className="ao-info-row" style={{ fontSize: '0.75rem' }}>
+                  <span className="ao-info-label">Transfer:</span>
+                  <code style={{ fontSize: '0.75rem', color: '#6b7280' }}>{order.paystack_transfer_code}</code>
+                </div>
+              )}
+              <div className="ao-info-row" style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.35rem' }}>
+                <span className="ao-info-label">Buyer Total:</span>
                 <span className="ao-info-value" style={{ color: '#15803d', fontSize: '1.05rem', fontWeight: 900 }}>
                   GH₵ {Number(order.total_amount).toFixed(2)}
                 </span>
@@ -264,6 +296,7 @@ export default function AdminOrdersPage() {
           buyer_email: o.buyer_email || '',
           phone: o.phone || '',
           delivery_address: o.delivery_address || '',
+          delivery_method: o.delivery_method || 'farmer_deliver',
           farmer_name: o.farmer_name || 'AgriLink Farmer',
           items: Array.isArray(o.items) ? o.items : [],
           total_amount: Number(o.total_amount) || 0,
