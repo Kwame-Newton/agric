@@ -2190,25 +2190,6 @@ export default function MarketplacePage() {
                       </div>
                     </div>
                     <p className="vsm-knowledge-desc">{visualSearchResult.knowledge.description}</p>
-
-                    <div className="vsm-knowledge-grid">
-                      <div className="vsm-knowledge-section">
-                        <div className="vsm-knowledge-section-title">💚 Health Benefits</div>
-                        <ul className="vsm-knowledge-list">
-                          {(visualSearchResult.knowledge.healthBenefits || []).map((b, i) => (
-                            <li key={i}>{b}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="vsm-knowledge-section">
-                        <div className="vsm-knowledge-section-title">🍳 Common Uses</div>
-                        <p className="vsm-knowledge-text">{visualSearchResult.knowledge.uses}</p>
-                      </div>
-                      <div className="vsm-knowledge-section">
-                        <div className="vsm-knowledge-section-title">📍 Growing Regions</div>
-                        <p className="vsm-knowledge-text">{visualSearchResult.knowledge.growingRegions}</p>
-                      </div>
-                    </div>
                   </div>
                 )}
 

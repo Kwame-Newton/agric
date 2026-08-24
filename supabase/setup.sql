@@ -44,6 +44,8 @@ create table if not exists public.farmers (
   id_type text not null,
   id_number text not null,
   farm_bio text,
+  tiktok_username text,
+  slug text unique,
   verification_status text not null default 'pending' check (verification_status in ('pending', 'verified', 'suspended', 'rejected')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -115,6 +117,7 @@ returns trigger as $$
 declare
   user_role text;
   parsed_farm_size numeric := 0;
+  generated_slug text;
 begin
   user_role := lower(coalesce(new.raw_user_meta_data->>'role', 'buyer'));
 
@@ -143,6 +146,8 @@ begin
 
   -- Insert into role-specific tables
   if user_role = 'farmer' then
+    generated_slug := lower(regexp_replace(coalesce(new.raw_user_meta_data->>'farm_name', 'Unnamed Farm'), '[^a-zA-Z0-9]+', '-', 'g')) || '-' || substring(new.id::text, 1, 6);
+
     insert into public.farmers (
       id, 
       farm_name, 
@@ -152,6 +157,7 @@ begin
       id_type, 
       id_number, 
       farm_bio, 
+      slug,
       verification_status
     )
     values (
@@ -163,6 +169,7 @@ begin
       coalesce(new.raw_user_meta_data->>'id_type', 'national'),
       coalesce(new.raw_user_meta_data->>'id_number', ''),
       coalesce(new.raw_user_meta_data->>'farm_bio', ''),
+      generated_slug,
       'pending'
     )
     on conflict (id) do nothing;

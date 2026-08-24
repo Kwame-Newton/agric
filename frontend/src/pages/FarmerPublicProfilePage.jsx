@@ -10,9 +10,11 @@ import FarmerChatModal from '../components/FarmerChatModal';
 import './FarmerPublicProfilePage.css';
 
 export default function FarmerPublicProfilePage() {
-  const { id } = useParams();
+  const { id, slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  const identifier = id || slug;
 
   const [farmer, setFarmer] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -29,19 +31,25 @@ export default function FarmerPublicProfilePage() {
 
   useEffect(() => {
     const loadData = async () => {
-      // 1. Fetch Farmer Profile
-      const foundFarmer = await fetchFarmerProfile(id);
+      // 1. Fetch Farmer Profile using id (or slug) from URL
+      const foundFarmer = await fetchFarmerProfile(identifier);
       setFarmer(foundFarmer);
 
-      // 2. Fetch Farmer Posts
-      const farmerPosts = await fetchFarmerPosts(id);
-      setPosts(farmerPosts);
+      // 2. Fetch Farmer Posts using the actual farmer UUID
+      if (foundFarmer && foundFarmer.id) {
+        const farmerPosts = await fetchFarmerPosts(foundFarmer.id);
+        setPosts(farmerPosts);
+      }
     };
 
     loadData();
-  }, [id]);
+  }, [identifier]);
 
   const handleAddToCart = (crop) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     setCart(prev => {
       const nextQty = (prev[crop.id] || 0) + 1;
       const updated = { ...prev, [crop.id]: nextQty };
@@ -119,12 +127,39 @@ export default function FarmerPublicProfilePage() {
             <p className="fpp-bio">{farmer.bio}</p>
 
             <div className="fpp-hero-actions">
-              <button className="fpp-btn-chat" onClick={() => setChatOpen(true)}>
+              {farmer.tiktokUsername && (() => {
+                // Handle cases where user pastes a full URL, or includes the @ symbol
+                let cleanUsername = farmer.tiktokUsername;
+                if (cleanUsername.includes('tiktok.com/')) {
+                  const parts = cleanUsername.split('tiktok.com/');
+                  cleanUsername = parts[parts.length - 1];
+                }
+                cleanUsername = cleanUsername.replace(/[@/]/g, '').trim();
+                
+                return (
+                  <a href={`https://www.tiktok.com/@${cleanUsername}`} target="_blank" rel="noopener noreferrer" className="fpp-btn-chat" style={{ background: '#000', color: '#fff', borderColor: '#000' }}>
+                    <Play size={18} /> Watch on TikTok
+                  </a>
+                );
+              })()}
+              <button className="fpp-btn-chat" onClick={() => {
+                if (!user) {
+                  navigate('/login');
+                } else {
+                  setChatOpen(true);
+                }
+              }}>
                 <MessageCircle size={18} /> Message Farmer
               </button>
-              <a href={`tel:${farmer.phone}`} className="fpp-btn-call">
+              <button className="fpp-btn-call" onClick={() => {
+                if (!user) {
+                  navigate('/login');
+                } else {
+                  window.location.href = `tel:${farmer.phone}`;
+                }
+              }}>
                 <Phone size={18} /> Call Farmer
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -211,6 +246,22 @@ export default function FarmerPublicProfilePage() {
           </div>
         )}
       </main>
+
+      {/* Guest Signup Prompt */}
+      {!user && (
+        <div className="fpp-guest-prompt" style={{
+          margin: '2rem auto', maxWidth: '800px', padding: '2rem',
+          backgroundColor: '#f0fdf4', borderRadius: '12px', textAlign: 'center',
+          border: '1px solid #bbf7d0'
+        }}>
+          <h3 style={{ margin: '0 0 1rem 0', color: '#166534' }}>Want to order from {farmer.farmName}?</h3>
+          <p style={{ margin: '0 0 1.5rem 0', color: '#15803d' }}>Sign up for a free AgriLink account to buy fresh crops directly.</p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <Link to="/register" style={{ padding: '0.75rem 1.5rem', background: '#16a34a', color: '#fff', borderRadius: '8px', textDecoration: 'none', fontWeight: 600 }}>Create Account</Link>
+            <Link to="/login" style={{ padding: '0.75rem 1.5rem', background: '#fff', color: '#16a34a', border: '1px solid #16a34a', borderRadius: '8px', textDecoration: 'none', fontWeight: 600 }}>Login</Link>
+          </div>
+        </div>
+      )}
 
       {/* Interactive Chat Modal */}
       <FarmerChatModal

@@ -154,14 +154,14 @@ function App() {
             }
           />
 
-          {/* Farmer Public Profile */}
+          {/* Farmer Public Profile (No login required, accessed via TikTok or Marketplace) */}
           <Route
-            path="/farmers/:id"
-            element={
-              <ProtectedRoute requiredRole="buyer">
-                <FarmerPublicProfilePage />
-              </ProtectedRoute>
-            }
+            path="/farm/:slug"
+            element={<FarmerPublicProfilePage />}
+          />
+          <Route
+            path="/farmers/:slug"
+            element={<FarmerPublicProfilePage />}
           />
           {/* Farmer Dashboard - Protected, farmers only */}
           <Route

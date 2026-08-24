@@ -54,7 +54,7 @@ export default function FarmerProfilePage() {
   const [stats, setStats] = useState({ crops: 0, orders: 0 });
 
   // Editable form state
-  const [farmInfo, setFarmInfo] = useState({ farmName: '', bio: '', location: '', primaryCategory: 'vegetables' });
+  const [farmInfo, setFarmInfo] = useState({ farmName: '', bio: '', location: '', primaryCategory: 'vegetables', tiktokUsername: '', slug: '' });
   const [personalInfo, setPersonalInfo] = useState({ fullName: '', phone: '', region: 'Ashanti' });
   const [paymentDetails, setPaymentDetails] = useState({
     paymentMethod: 'mtn_momo',
@@ -118,6 +118,8 @@ export default function FarmerProfilePage() {
         bio: farmer?.farm_bio || '',
         location: farmer?.farm_location || '',
         primaryCategory: farmer?.primary_category || 'vegetables',
+        tiktokUsername: farmer?.tiktok_username || '',
+        slug: farmer?.slug || '',
       });
       setPersonalInfo({
         fullName: prof?.full_name || '',
@@ -152,6 +154,7 @@ export default function FarmerProfilePage() {
           farm_bio: farmInfo.bio,
           farm_location: farmInfo.location,
           primary_category: farmInfo.primaryCategory,
+          tiktok_username: farmInfo.tiktokUsername,
         })
         .eq('id', user.id);
 
@@ -385,6 +388,45 @@ export default function FarmerProfilePage() {
                   ))}
                 </select>
               </Field>
+
+              <Field label="TikTok Username">
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <span style={{
+                    padding: '0.75rem 0.9rem', background: '#f3f4f6', borderRadius: '10px',
+                    fontWeight: 800, color: '#374151', border: '1px solid #d1d5db', display: 'flex', alignItems: 'center'
+                  }}>@</span>
+                  <input
+                    className="fp-input"
+                    value={farmInfo.tiktokUsername}
+                    onChange={e => setFarmInfo(s => ({ ...s, tiktokUsername: e.target.value }))}
+                    type="text"
+                    placeholder="e.g. greenvalleyfarms"
+                  />
+                </div>
+              </Field>
+
+              {farmInfo.slug && (
+                <Field label="Public Farm Link (For your TikTok bio)">
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      className="fp-input fp-input-readonly"
+                      value={`${window.location.origin}/farm/${farmInfo.slug}`}
+                      readOnly
+                    />
+                    <button
+                      type="button"
+                      className="fp-save-btn"
+                      style={{ background: '#374151', color: 'white', border: 'none', cursor: 'pointer' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/farm/${farmInfo.slug}`);
+                        showToast('Link copied to clipboard!');
+                      }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </Field>
+              )}
 
               <div className="fp-form-actions">
                 <button className="fp-save-btn" type="submit" disabled={saving}>

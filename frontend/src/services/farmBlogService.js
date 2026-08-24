@@ -51,6 +51,8 @@ export async function uploadFarmMedia(file, type = 'image') {
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
     const filePath = `posts/${fileName}`;
 
+    console.log('📤 Attempting Supabase Storage upload to farm_media/', filePath);
+
     const { data, error } = await supabase.storage
       .from('farm_media')
       .upload(filePath, file, {
@@ -58,24 +60,29 @@ export async function uploadFarmMedia(file, type = 'image') {
         upsert: false,
       });
 
+    if (error) {
+      console.error('❌ Storage upload error:', error.message, '| Status:', error.statusCode, '| Error:', JSON.stringify(error));
+    }
+
     if (!error && data) {
       const { data: publicData } = supabase.storage
         .from('farm_media')
         .getPublicUrl(filePath);
 
       if (publicData?.publicUrl) {
+        console.log('✅ Storage upload success:', publicData.publicUrl);
         return publicData.publicUrl;
       }
     }
   } catch (err) {
-    console.warn('Supabase storage upload error/fallback:', err);
+    console.error('❌ Storage upload exception:', err);
   }
 
-  // Fallback if storage bucket is not created yet
+  console.warn('⚠️ Storage upload failed — falling back to base64 (will only work on this browser)');
+  // Fallback if storage upload failed
   if (type === 'image') {
     return await fileToDataUrl(file, 800, 800);
   } else {
-    // For video without bucket, create Object URL or data URL
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (ev) => resolve(ev.target.result);
@@ -217,11 +224,17 @@ export async function createFarmPost({ farmerId, mediaType, mediaUrl, caption, c
   };
 
   try {
+    console.log('📝 Inserting farm post — farmer_id:', farmerId, '| media_url length:', mediaUrl?.length, '| caption:', caption);
     const { data, error } = await supabase
       .from('farm_posts')
       .insert([newPostObj])
       .select()
       .single();
+
+    if (error) {
+      // Log the real Supabase error so we can debug it
+      console.error('❌ Supabase createFarmPost error:', error.message, error.details, error.hint);
+    }
 
     if (!error && data) {
       // Sync local storage copy
@@ -239,10 +252,11 @@ export async function createFarmPost({ farmerId, mediaType, mediaUrl, caption, c
       return { success: true, post: data };
     }
   } catch (err) {
-    console.warn('Supabase create post fallback to local:', err);
+    console.error('❌ Supabase createFarmPost exception:', err);
   }
 
-  // Local fallback save
+  // Local fallback save (only used if Supabase fails)
+  console.warn('⚠️ Post saved to localStorage only — will not appear on other devices/browsers');
   const fallbackPost = {
     ...newPostObj,
     id: `post-${Date.now()}`,
@@ -373,27 +387,52 @@ function formatRelativeTime(dateString) {
   return `${days} days ago`;
 }
 
+// Helper to check if string is UUID
+function isUUID(str) {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
 // ─── Fetch Farmer Profile Details ───
-export async function fetchFarmerProfile(farmerId) {
-  if (!farmerId) return null;
+export async function fetchFarmerProfile(identifier) {
+  if (!identifier) return null;
 
   try {
+    let farmerData = null;
+    let farmerError = null;
+    let actualId = identifier;
+
+    if (!isUUID(identifier)) {
+      // It's a slug, fetch the farmer by slug first
+      const { data, error } = await supabase
+        .from('farmers')
+        .select('*')
+        .eq('slug', identifier)
+        .single();
+      
+      if (error || !data) return null;
+      farmerData = data;
+      actualId = data.id;
+    } else {
+      const { data, error } = await supabase
+        .from('farmers')
+        .select('*')
+        .eq('id', actualId)
+        .single();
+      farmerData = data;
+      farmerError = error;
+    }
+
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', farmerId)
-      .single();
-
-    const { data: farmerData, error: farmerError } = await supabase
-      .from('farmers')
-      .select('*')
-      .eq('id', farmerId)
+      .eq('id', actualId)
       .single();
 
     const { data: cropsData, error: cropsError } = await supabase
       .from('crops')
       .select('*')
-      .eq('farmer_id', farmerId);
+      .eq('farmer_id', actualId);
 
     if (!profileError && !farmerError && profileData && farmerData) {
       const fetchedCrops = (!cropsError && cropsData) 
@@ -401,7 +440,7 @@ export async function fetchFarmerProfile(farmerId) {
         : [];
 
       return {
-        id: farmerId,
+        id: actualId,
         name: profileData.full_name || 'AgriLink Farmer',
         farmName: farmerData.farm_name || 'Green Acres Farm',
         location: farmerData.farm_location || 'Ghana',
@@ -411,6 +450,8 @@ export async function fetchFarmerProfile(farmerId) {
         reviewsCount: 12,
         bio: farmerData.farm_bio || 'Sustainable local farming.',
         phone: profileData.phone || '+233 24 000 0000',
+        tiktokUsername: farmerData.tiktok_username || null,
+        slug: farmerData.slug || null,
         crops: fetchedCrops
       };
     }
