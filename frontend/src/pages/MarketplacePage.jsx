@@ -110,8 +110,9 @@ function VisualSearchModal({ open, onClose, onSearchComplete }) {
       });
       const imageBase64 = await base64Promise;
 
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
       // 2. Call backend API POST /api/visual-search (Google Cloud Vision + Web Detection + Knowledge)
-      const res = await fetch('http://localhost:4000/api/visual-search', {
+      const res = await fetch(`${backendUrl}/api/visual-search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -914,7 +915,8 @@ function CartDrawer({ open, onClose, cart, crops, onCartChange, onClearCart, use
           newOrderObj.status = 'processing';
 
           // Notify backend of payment verification
-          fetch(`http://localhost:4000/api/payments/verify/${encodeURIComponent(paidRef)}`).catch(() => {});
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+          fetch(`${backendUrl}/api/payments/verify/${encodeURIComponent(paidRef)}`).catch(() => {});
 
           // Save to Supabase orders table
           supabase.from('orders').insert({
@@ -1400,7 +1402,8 @@ function OrdersModal({ open, onClose, user, newOrders }) {
     setConfirmingId(order.id || order.order_number);
     try {
       // Call backend API to release Paystack transfer
-      const res = await fetch(`http://localhost:4000/api/orders/${order.id || order.order_number}/confirm`, {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+      const res = await fetch(`${backendUrl}/api/orders/${order.id || order.order_number}/confirm`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -1668,7 +1671,15 @@ export default function MarketplacePage() {
     const identifiedName = typeof resultData === 'string' ? resultData : resultData.identified;
     const matchTerm = (typeof resultData === 'object' && resultData.identifiedKey ? resultData.identifiedKey : identifiedName).toLowerCase();
     
-    const matches = crops.filter(c => c.name.toLowerCase().includes(matchTerm) || c.category.toLowerCase().includes(matchTerm));
+    // Find matching crops in the local state (checking by backend IDs, bidirectional name, or category)
+    const backendCropIds = new Set((resultData?.crops || []).map(c => String(c.id)));
+    const matches = crops.filter(c => {
+      if (backendCropIds.has(String(c.id))) return true;
+      const cName = c.name.toLowerCase();
+      const cCat = (c.category || '').toLowerCase();
+      return cName.includes(matchTerm) || matchTerm.includes(cName) || cCat.includes(matchTerm);
+    });
+
     const isFound = typeof resultData === 'object' && resultData.foundInMarketplace !== undefined
       ? resultData.foundInMarketplace
       : matches.length > 0;
@@ -1685,14 +1696,19 @@ export default function MarketplacePage() {
           similarCrops: ['Fresh Tomatoes', 'Red Pepper', 'Cabbage']
         };
 
+    const finalCount = matches.length > 0 ? matches.length : (resultData?.count || 0);
+
     setVisualSearchResult({
       identified: knowledgeObj.name || identifiedName,
       found: isFound,
-      count: matches.length,
+      count: finalCount,
       knowledge: knowledgeObj,
       similar: knowledgeObj.similarCrops || ['Cabbage', 'Garden Eggs', 'Lettuce']
     });
 
+    // Reset filters so the matched crop is not hidden
+    setSelectedCategory('all');
+    setLocation('All Locations');
     setSearch(matchTerm);
   };
 
@@ -1787,7 +1803,8 @@ export default function MarketplacePage() {
     if (ref && (payment === 'callback' || payment === 'success')) {
       const verifyPaystack = async () => {
         try {
-          const res = await fetch(`http://localhost:4000/api/payments/verify/${encodeURIComponent(ref)}`);
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+          const res = await fetch(`${backendUrl}/api/payments/verify/${encodeURIComponent(ref)}`);
           const result = await res.json();
 
           if (result.success) {
@@ -1848,7 +1865,15 @@ export default function MarketplacePage() {
 
   const filtered = useMemo(() => {
     let list = [...crops];
-    if (search) list = list.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.farm.toLowerCase().includes(search.toLowerCase()));
+    if (search) {
+      const s = search.toLowerCase().trim();
+      list = list.filter(p => {
+        const pName = p.name.toLowerCase();
+        const pFarm = p.farm.toLowerCase();
+        const pCat = (p.category || '').toLowerCase();
+        return pName.includes(s) || s.includes(pName) || pFarm.includes(s) || pCat.includes(s);
+      });
+    }
     if (selectedCategory !== 'all') list = list.filter(p => p.category === selectedCategory);
     list = list.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
     if (location !== 'All Locations') list = list.filter(p => p.location.includes(location));

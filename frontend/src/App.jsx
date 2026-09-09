@@ -19,6 +19,7 @@ import MarketplacePage from './pages/MarketplacePage';
 import ContactPage from './pages/ContactPage';
 import FarmBlogFeedPage from './pages/FarmBlogFeedPage';
 import FarmerPublicProfilePage from './pages/FarmerPublicProfilePage';
+import FarmerEarningsPage from './pages/FarmerEarningsPage';
 
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -194,6 +195,18 @@ function App() {
               <ProtectedRoute requiredRole="farmer">
                 <DashboardLayout>
                   <FarmerMyOrdersPage />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Farmer - Earnings & Payouts */}
+          <Route
+            path="/dashboard/earnings"
+            element={
+              <ProtectedRoute requiredRole="farmer">
+                <DashboardLayout>
+                  <FarmerEarningsPage />
                 </DashboardLayout>
               </ProtectedRoute>
             }

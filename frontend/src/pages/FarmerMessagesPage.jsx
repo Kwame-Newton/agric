@@ -219,13 +219,25 @@ export default function FarmerMessagesPage() {
             </div>
           </div>
 
-          <div className="fm-search">
-            <Search size={18} />
+          <div className="fmsg-search-box">
+            <Search size={16} className="fmsg-search-icon" />
             <input
+              type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search buyers by name..."
+              className="fmsg-search-input"
             />
+            {search && (
+              <button
+                type="button"
+                className="fmsg-search-clear"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
           </div>
 
           <div className="fm-conv-list">

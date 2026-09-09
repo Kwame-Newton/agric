@@ -4,13 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Sprout, ShoppingCart, BookOpen,
   User, MessageSquare, Settings, LogOut, Leaf,
-  Menu, X, Bell, ChevronDown
+  Menu, X, Bell, ChevronDown, Wallet
 } from 'lucide-react';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Sprout, label: 'My Crops', path: '/dashboard/crops' },
   { icon: ShoppingCart, label: 'Orders', path: '/dashboard/orders' },
+  { icon: Wallet, label: 'Earnings', path: '/dashboard/earnings' },
   { icon: BookOpen, label: 'Farm Blog', path: '/dashboard/blog' },
   { icon: User, label: 'Profile', path: '/dashboard/profile' },
   { icon: MessageSquare, label: 'Messages', path: '/dashboard/messages', badge: 3 },

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const paystackService = require('../services/paystackService');
+const smsService = require('../services/smsService');
 
 module.exports = function (supabase) {
   const COMMISSION_RATE = Number(process.env.COMMISSION_RATE || 0.05);
@@ -32,6 +33,16 @@ module.exports = function (supabase) {
 
       if (error) {
         return res.status(400).json({ error: error.message });
+      }
+
+      // ── Send SMS to Buyer if marked as Delivered ──
+      if (status.toLowerCase() === 'delivered' && data?.phone) {
+        smsService.notifyOrderDeliveredBuyer({
+          buyerPhone: data.phone,
+          buyerName: data.buyer_name,
+          orderNumber: data.order_number,
+          farmerName: data.farmer_name || null,
+        }).catch(e => console.warn('[SMS] Delivery notification to buyer failed:', e.message));
       }
 
       return res.json({
@@ -80,16 +91,18 @@ module.exports = function (supabase) {
       // 3. Look up farmer's payment details
       let recipientCode = null;
       let farmerName = 'Farmer';
+      let farmerPhone = null;
       if (order.farmer_id) {
         const { data: farmer } = await supabase
           .from('farmers')
-          .select('*, profiles(full_name)')
+          .select('*, profiles(full_name, phone)')
           .eq('id', order.farmer_id)
           .single();
 
         if (farmer) {
           recipientCode = farmer.paystack_recipient_code;
           farmerName = farmer.mobile_money_name || farmer.profiles?.full_name || 'Farmer';
+          farmerPhone = farmer.mobile_money_number || farmer.profiles?.phone || null;
 
           if (!recipientCode && farmer.mobile_money_number) {
             try {
@@ -176,6 +189,27 @@ module.exports = function (supabase) {
         } catch (logErr) {
           console.warn('Payout log error:', logErr.message);
         }
+      }
+
+      // ── 7. Send SMS Notifications ──
+      // To Farmer (Payout released!)
+      if (farmerPhone) {
+        smsService.notifyPayoutReleasedFarmer({
+          farmerPhone,
+          farmerName,
+          orderNumber: order.order_number,
+          payoutAmount,
+          momoNumber: farmerPhone,
+        }).catch(e => console.warn('[SMS] Farmer payout SMS failed:', e.message));
+      }
+
+      // To Buyer (Delivery confirmation)
+      if (order.phone) {
+        smsService.notifyPayoutReleasedBuyer({
+          buyerPhone: order.phone,
+          buyerName: order.buyer_name,
+          orderNumber: order.order_number,
+        }).catch(e => console.warn('[SMS] Buyer confirmation SMS failed:', e.message));
       }
 
       return res.json({

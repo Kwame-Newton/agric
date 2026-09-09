@@ -1,0 +1,324 @@
+﻿/* ─── Farmer Earnings Page ──────────────────────────────────── */
+
+.fe-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.fe-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.fe-title {
+  font-size: 1.5rem;
+  font-weight: 1000;
+  color: var(--text-primary);
+}
+
+.fe-subtitle {
+  margin-top: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.fe-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fe-btn-subtle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fe-btn-subtle:hover {
+  background: var(--bg-offset);
+  border-color: var(--primary);
+}
+
+@keyframes fe-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.fe-spin { animation: fe-spin 1s linear infinite; }
+
+/* ── Summary Cards ── */
+.fe-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .fe-summary-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .fe-summary-grid { grid-template-columns: 1fr; }
+}
+
+.fe-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fe-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fe-card-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.fe-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+}
+
+.fe-card-icon-green { background: #e8f5e9; color: #2e7d32; }
+.fe-card-icon-amber { background: #fff8e1; color: #f57f17; }
+.fe-card-icon-red   { background: #ffebee; color: #c62828; }
+.fe-card-icon-blue  { background: #e3f2fd; color: #1565c0; }
+
+.fe-card-value {
+  font-size: 1.75rem;
+  font-weight: 1000;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.fe-card-sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.fe-card-earned .fe-card-value { color: #2e7d32; }
+.fe-card-escrow .fe-card-value { color: #f57f17; }
+
+/* ── Chart ── */
+.fe-chart-section {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.fe-section-title {
+  font-size: 1.05rem;
+  font-weight: 1000;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.fe-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  height: 160px;
+}
+
+.fe-bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.fe-bar-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  justify-content: flex-end;
+  height: 130px;
+}
+
+.fe-bar {
+  width: 70%;
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  transition: height 0.4s ease;
+}
+
+.fe-bar-revenue { background: rgba(30, 92, 59, 0.2); }
+.fe-bar-payout  { background: var(--primary, #1e5c3b); }
+
+.fe-bar-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fe-chart-legend {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.fe-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 0.4rem;
+}
+
+.fe-legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* ── Section wrapper ── */
+.fe-section {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.fe-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* ── Tables ── */
+.fe-table-wrap { overflow-x: auto; }
+
+.fe-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.fe-table th {
+  text-align: left;
+  padding: 0.7rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  background: var(--bg-offset, #f9f9f9);
+}
+
+.fe-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--bg-offset);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.fe-table tr:last-child td { border-bottom: none; }
+.fe-table tr:hover td { background: #fafafa; }
+
+.fe-td-strong { font-weight: 1000; color: var(--text-primary); }
+.fe-td-green  { font-weight: 1000; color: #2e7d32; }
+.fe-td-amber  { font-weight: 1000; color: #f57f17; }
+.fe-td-red    { font-weight: 1000; color: #c62828; }
+.fe-td-muted  { color: var(--text-muted); font-size: 0.82rem; }
+
+/* ── Status badges ── */
+.fe-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.6rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 1000;
+  white-space: nowrap;
+}
+
+.fe-badge-held     { background: #fff8e1; color: #f57f17; }
+.fe-badge-released { background: #e8f5e9; color: #2e7d32; }
+.fe-badge-pending  { background: #f3f3f3; color: #666; }
+.fe-badge-success  { background: #e8f5e9; color: #2e7d32; }
+.fe-badge-failed   { background: #ffebee; color: #c62828; }
+.fe-badge-queued   { background: #e3f2fd; color: #1565c0; }
+.fe-badge-simulated{ background: #f3e5f5; color: #6a1b9a; }
+
+/* ── Empty state ── */
+.fe-empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.fe-empty-icon { font-size: 2.5rem; }
+.fe-empty h3   { margin-top: 0.5rem; font-size: 1.1rem; font-weight: 1000; color: var(--text-primary); }
+.fe-empty p    { margin-top: 0.3rem; font-size: 0.9rem; }
+
+/* ── Loading ── */
+.fe-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  gap: 1rem;
+  color: var(--text-muted);
+}
+
+/* ── Escrow info banner ── */
+.fe-escrow-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  color: #7c5a00;
+  line-height: 1.5;
+}
+
+.fe-escrow-banner svg { flex-shrink: 0; color: #f9a825; margin-top: 2px; }

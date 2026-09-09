@@ -201,13 +201,13 @@ export function AuthProvider({ children }) {
 
   const register = async (data) => {
     try {
-      // 1. Sign up user in Supabase Auth with metadata (passed to DB trigger)
+      const redirectBase = import.meta.env.VITE_SITE_URL || window.location.origin;
       const normalizedEmail = data.email.trim().toLowerCase();
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password: data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/login?confirmed=true`,
+          emailRedirectTo: `${redirectBase}/login?confirmed=true`,
           data: {
             full_name: data.fullName,
             phone: data.phone,

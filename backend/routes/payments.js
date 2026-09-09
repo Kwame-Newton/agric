@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const paystackService = require('../services/paystackService');
+const smsService = require('../services/smsService');
 
 module.exports = function (supabase) {
   const COMMISSION_RATE = Number(process.env.COMMISSION_RATE || 0.05);
@@ -134,6 +135,39 @@ module.exports = function (supabase) {
 
         if (error) {
           console.warn('Could not update order in Supabase:', error.message);
+        } else if (updatedOrder) {
+          // ── Send SMS to Buyer (Escrow secured) ──
+          if (updatedOrder.phone) {
+            smsService.notifyOrderPlacedBuyer({
+              buyerPhone: updatedOrder.phone,
+              buyerName: updatedOrder.buyer_name,
+              orderNumber: updatedOrder.order_number,
+              totalAmount: updatedOrder.total_amount,
+            }).catch(e => console.warn('[SMS] Buyer escrow notification failed:', e.message));
+          }
+
+          // ── Send SMS to Farmer (New order received) ──
+          if (updatedOrder.farmer_id) {
+            supabase
+              .from('farmers')
+              .select('mobile_money_number, mobile_money_name, profiles(full_name, phone)')
+              .eq('id', updatedOrder.farmer_id)
+              .single()
+              .then(({ data: f }) => {
+                const farmerPhone = f?.mobile_money_number || f?.profiles?.phone;
+                const farmerName = f?.mobile_money_name || f?.profiles?.full_name || 'Farmer';
+                if (farmerPhone) {
+                  smsService.notifyOrderPlacedFarmer({
+                    farmerPhone,
+                    farmerName,
+                    orderNumber: updatedOrder.order_number,
+                    totalAmount: updatedOrder.total_amount,
+                    buyerName: updatedOrder.buyer_name,
+                  }).catch(e => console.warn('[SMS] Farmer order notification failed:', e.message));
+                }
+              })
+              .catch(dbErr => console.warn('[SMS] Farmer lookup for SMS error:', dbErr.message));
+          }
         }
 
         return res.json({
@@ -402,5 +436,107 @@ module.exports = function (supabase) {
     }
   });
 
+  // ─── 6. FARMER EARNINGS SUMMARY ───
+  router.get('/farmer/:farmer_id/earnings', async (req, res) => {
+    try {
+      const { farmer_id } = req.params;
+      if (!farmer_id) {
+        return res.status(400).json({ error: 'farmer_id is required' });
+      }
+
+      // Fetch all orders for this farmer
+      const { data: orders, error: ordersErr } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('farmer_id', farmer_id)
+        .order('created_at', { ascending: false });
+
+      if (ordersErr) {
+        console.warn('Error fetching farmer orders:', ordersErr.message);
+      }
+
+      const allOrders = orders || [];
+
+      // Fetch all payout transfer records for this farmer
+      const { data: payouts, error: payoutsErr } = await supabase
+        .from('payout_transfers')
+        .select('*')
+        .eq('farmer_id', farmer_id)
+        .order('created_at', { ascending: false });
+
+      if (payoutsErr) {
+        console.warn('Error fetching payout_transfers:', payoutsErr.message);
+      }
+
+      const allPayouts = payouts || [];
+
+      // ── Compute summary stats ──
+      const totalEarned = allOrders
+        .filter(o => o.escrow_status === 'released')
+        .reduce((acc, o) => acc + Number(o.farmer_amount || 0), 0);
+
+      const inEscrow = allOrders
+        .filter(o => o.escrow_status === 'held' && o.payment_status === 'paid')
+        .reduce((acc, o) => acc + Number(o.farmer_amount || (Number(o.total_amount || 0) * (1 - (o.commission_rate || COMMISSION_RATE))), 0), 0);
+
+      const totalCommission = allOrders
+        .filter(o => o.payment_status === 'paid')
+        .reduce((acc, o) => acc + Number(o.commission_amount || 0), 0);
+
+      const totalRevenue = allOrders
+        .filter(o => o.payment_status === 'paid')
+        .reduce((acc, o) => acc + Number(o.total_amount || 0), 0);
+
+      const pendingOrders = allOrders.filter(o => o.status === 'pending').length;
+      const processingOrders = allOrders.filter(o => o.status === 'processing').length;
+      const confirmedOrders = allOrders.filter(o => o.status === 'confirmed' || o.status === 'delivered').length;
+
+      // ── Monthly revenue chart data (last 6 months) ──
+      const monthlyMap = {};
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const label = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+        monthlyMap[key] = { label, revenue: 0, payout: 0, orders: 0 };
+      }
+
+      allOrders.forEach(o => {
+        if (!o.created_at) return;
+        const d = new Date(o.created_at);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (monthlyMap[key] && o.payment_status === 'paid') {
+          monthlyMap[key].revenue += Number(o.total_amount || 0);
+          monthlyMap[key].payout += Number(o.farmer_amount || 0);
+          monthlyMap[key].orders += 1;
+        }
+      });
+
+      const monthlyChart = Object.values(monthlyMap);
+
+      return res.json({
+        success: true,
+        summary: {
+          total_earned: Number(totalEarned.toFixed(2)),
+          in_escrow: Number(Math.max(inEscrow, 0).toFixed(2)),
+          total_commission_paid: Number(totalCommission.toFixed(2)),
+          total_revenue: Number(totalRevenue.toFixed(2)),
+          total_orders: allOrders.length,
+          pending_orders: pendingOrders,
+          processing_orders: processingOrders,
+          confirmed_orders: confirmedOrders,
+        },
+        monthly_chart: monthlyChart,
+        transactions: allOrders,
+        payout_history: allPayouts,
+      });
+    } catch (err) {
+      console.error('Error fetching farmer earnings:', err);
+      return res.status(500).json({ error: err.message || 'Failed to fetch earnings data' });
+    }
+  });
+
   return router;
 };
+
