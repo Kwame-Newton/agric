@@ -522,7 +522,7 @@ Return your answer strictly in valid JSON format with this structure:
         const rawMime = mimeMatch ? mimeMatch[1].toLowerCase() : 'image/jpeg';
         const imageMimeType = rawMime === 'image/jpg' ? 'image/jpeg' : rawMime;
 
-        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-3.6-flash:generateContent?key=${geminiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
