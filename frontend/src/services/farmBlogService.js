@@ -126,15 +126,39 @@ export async function fetchAllFarmPosts() {
         views,
         created_at,
         updated_at,
-        profiles:farmer_id ( full_name, phone ),
-        farmers:farmer_id ( farm_name, farm_location, farm_bio )
+        profiles:farmer_id ( full_name, phone )
       `)
       .order('created_at', { ascending: false });
 
+    if (error) {
+      console.error('❌ Supabase fetchAllFarmPosts error:', error.message);
+    }
+
     if (!error && dbPosts && dbPosts.length > 0) {
+      // Lookup farmer details separately since 'farmers' doesn't have a direct FK in schema cache
+      const farmerIds = [...new Set(dbPosts.map((p) => p.farmer_id).filter(Boolean))];
+      let farmersMap = {};
+
+      if (farmerIds.length > 0) {
+        try {
+          const { data: farmersData } = await supabase
+            .from('farmers')
+            .select('id, farm_name, farm_location, farm_bio')
+            .in('id', farmerIds);
+
+          if (farmersData) {
+            farmersData.forEach((f) => {
+              farmersMap[f.id] = f;
+            });
+          }
+        } catch (fErr) {
+          console.warn('Could not fetch farmers metadata:', fErr);
+        }
+      }
+
       // Transform database records into clean feed objects
       return dbPosts.map((post) => {
-        const farmerInfo = post.farmers || {};
+        const farmerInfo = farmersMap[post.farmer_id] || {};
         const profileInfo = post.profiles || {};
 
         return {
