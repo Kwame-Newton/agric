@@ -902,7 +902,7 @@ function CartDrawer({ open, onClose, cart, crops, onCartChange, onClearCart, use
 
       // 1. If buyer chose Paystack Escrow (Mobile Money or Card), open Paystack Popup
       if (paymentMethod !== 'cash') {
-        const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_b8e4dc35d57cdd8526f6641b42fc4a67cfdc8677';
+        const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_live_e05a41b0986acd4d3803327a8cd045f1d837afff';
         const reference = `AGR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const buyerEmail = (user?.email && user.email.includes('@')) ? user.email : 'buyer@agrilink.gh';
         const amountInPesewas = Math.max(100, Math.round(grandTotal * 100));
@@ -1680,9 +1680,7 @@ export default function MarketplacePage() {
       return cName.includes(matchTerm) || matchTerm.includes(cName) || cCat.includes(matchTerm);
     });
 
-    const isFound = typeof resultData === 'object' && resultData.foundInMarketplace !== undefined
-      ? resultData.foundInMarketplace
-      : matches.length > 0;
+    const isFound = Boolean((resultData && resultData.foundInMarketplace) || matches.length > 0);
 
     const knowledgeObj = typeof resultData === 'object' && resultData.knowledge
       ? resultData.knowledge

@@ -344,16 +344,35 @@ const CROP_SYNONYMS = {
   spinach: ['spinach', 'kontomire', 'greens', 'leafy greens']
 };
 
-function getCropKnowledge(cropKey, visionLabels = [], webEntities = []) {
+function getCropKnowledge(cropKey, visionLabels = [], webEntities = [], geminiData = null) {
   const normalized = (cropKey || '').toLowerCase();
   
+  if (geminiData && geminiData.description) {
+    const formattedTitle = geminiData.cropName || (cropKey
+      ? cropKey.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      : 'Identified Crop');
+    return {
+      name: formattedTitle,
+      category: geminiData.category || (visionLabels[0] ? `Agricultural Produce (${visionLabels[0]})` : 'Produce & Crops'),
+      description: geminiData.description,
+      healthBenefits: Array.isArray(geminiData.healthBenefits) && geminiData.healthBenefits.length > 0
+        ? geminiData.healthBenefits
+        : ['Natural source of essential vitamins, minerals, and dietary fiber', 'Supports healthy digestion and overall wellness', 'Staple nutritious produce in West Africa'],
+      uses: geminiData.uses || 'Used in traditional home cooking, stews, soups, or local fresh markets.',
+      growingRegions: geminiData.growingRegions || 'Ashanti, Eastern, Volta, and Brong-Ahafo regions (Ghana)',
+      similarCrops: Array.isArray(geminiData.similarCrops) && geminiData.similarCrops.length > 0
+        ? geminiData.similarCrops
+        : ['Cassava', 'Plantain', 'Yam', 'Maize']
+    };
+  }
+
   for (const key of Object.keys(CROP_KNOWLEDGE_DB)) {
     if (normalized.includes(key) || key.includes(normalized)) {
       return CROP_KNOWLEDGE_DB[key];
     }
   }
 
-  // Dynamic fallback for any internet crop identified via Google Vision Lens
+  // Dynamic fallback for any internet crop identified via AI Vision Lens
   const formattedTitle = cropKey
     ? cropKey.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
     : 'Identified Crop';
@@ -361,7 +380,7 @@ function getCropKnowledge(cropKey, visionLabels = [], webEntities = []) {
   return {
     name: formattedTitle,
     category: visionLabels[0] ? `Agricultural Produce (${visionLabels[0]})` : 'Produce & Crops',
-    description: `A distinctive crop identified via Google Vision Lens. Identified labels include: ${visionLabels.slice(0, 5).join(', ')}.`,
+    description: `A distinctive crop identified via AI Visual Intelligence. Identified labels include: ${visionLabels.slice(0, 5).join(', ')}.`,
     healthBenefits: ['Natural source of plant nutrients and dietary fiber', 'Contains essential vitamins and organic antioxidants', 'Supports balanced dietary health'],
     uses: 'Used in cooking, salads, fresh juices, or traditional culinary recipes.',
     growingRegions: 'Various agricultural regions',
@@ -475,8 +494,94 @@ app.post('/api/visual-search', async (req, res) => {
       activeCrops = DEFAULT_MARKETPLACE_CROPS;
     }
 
-    // 2. Call Google Cloud Vision API if API Key is available
-    if (apiKey && cleanBase64) {
+    // 2. Call Google Gemini Multimodal Vision API if available
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_VISION_API_KEY || process.env.GOOGLE_CLOUD_KEY;
+    let geminiCropData = null;
+    let geminiError = null;
+
+    if (geminiKey && cleanBase64) {
+      try {
+        const cropNamesList = activeCrops.map(c => c.name).join(', ');
+        const promptText = `You are the AI visual recognition system for AgriLink, Ghana's agricultural marketplace.
+Carefully examine this photo to identify the crop, produce, fruit, vegetable, tuber, or grain shown.
+The crops currently active in our marketplace are: [${cropNamesList}].
+Identify what crop this is.
+Even if the crop is raw, harvested, peeled, sliced, packaged, dried, or growing in a farm, identify it accurately.
+Return your answer strictly in valid JSON format with this structure:
+{
+  "cropName": "name of the crop (e.g. Cassava, Maize, Carrot, Banana, Spring Onion, Tomato, Pepper, Yam, Plantain, Rice, Onion, Okra, Ginger)",
+  "category": "Tubers & Root Crops | Grains & Cereals | Vegetables | Tropical Fruits | Root Vegetables",
+  "confidence": 0.95,
+  "description": "Short 1-2 sentence description of the crop and its nutritional and culinary value in Ghana and West Africa",
+  "healthBenefits": ["Benefit 1", "Benefit 2", "Benefit 3"],
+  "uses": "Common Ghanaian dishes and culinary uses (e.g., fufu, banku, jollof, soups, salads, snacking)",
+  "synonyms": ["other common names", "local Ghanaian / Twi names like Bankye, Aburoo, Borodee, etc."]
+}`;
+
+        const mimeMatch = imageBase64 ? imageBase64.match(/^data:(image\/\w+);base64,/) : null;
+        const rawMime = mimeMatch ? mimeMatch[1].toLowerCase() : 'image/jpeg';
+        const imageMimeType = rawMime === 'image/jpg' ? 'image/jpeg' : rawMime;
+
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType: imageMimeType,
+                      data: cleanBase64
+                    }
+                  },
+                  { text: promptText }
+                ]
+              }
+            ],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.1
+            }
+          })
+        });
+
+        const geminiJson = await geminiRes.json();
+        if (geminiJson.error) {
+          geminiError = geminiJson.error.message;
+          console.warn('[Visual Search] Gemini API warning:', geminiError);
+        } else {
+          const candidateText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (candidateText) {
+            try {
+              let cleaned = candidateText.trim();
+              if (cleaned.startsWith('```')) {
+                cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+              }
+              geminiCropData = JSON.parse(cleaned);
+              console.log('[Visual Search] Gemini successfully identified crop:', geminiCropData.cropName);
+              if (geminiCropData.cropName) {
+                bestGuessLabel = geminiCropData.cropName.toLowerCase().trim();
+              }
+              if (Array.isArray(geminiCropData.synonyms)) {
+                webEntities.push(...geminiCropData.synonyms.map(s => s.toLowerCase().trim()));
+              }
+              if (geminiCropData.category) {
+                detectedLabels.push(geminiCropData.category.toLowerCase().trim());
+              }
+            } catch (pErr) {
+              console.warn('[Visual Search] Gemini JSON parse error:', pErr.message);
+            }
+          }
+        }
+      } catch (gErr) {
+        geminiError = gErr.message;
+        console.warn('[Visual Search] Gemini fetch exception:', gErr.message);
+      }
+    }
+
+    // 2b. Call Google Cloud Vision API as fallback/supplement if available and Gemini did not resolve
+    if (!geminiCropData && apiKey && cleanBase64) {
       try {
         const visionResponse = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
           method: 'POST',
@@ -529,7 +634,18 @@ app.post('/api/visual-search', async (req, res) => {
       const cropCategory = (crop.category || '').toLowerCase();
       const synonyms = CROP_SYNONYMS[cropName] || [cropName];
 
-      // A. Direct Image Hash / Byte Match (Farmer's exact or cropped upload)
+      // A. Direct Match from Gemini Visual AI (Highest Confidence)
+      if (geminiCropData && geminiCropData.cropName) {
+        const geminiName = geminiCropData.cropName.toLowerCase().trim();
+        const geminiSyns = Array.isArray(geminiCropData.synonyms) ? geminiCropData.synonyms.map(s => s.toLowerCase().trim()) : [];
+        if (cropName === geminiName || cropName.includes(geminiName) || geminiName.includes(cropName)) {
+          score += 300;
+        } else if (synonyms.some(s => s === geminiName || geminiSyns.includes(s) || s.includes(geminiName) || geminiName.includes(s))) {
+          score += 260;
+        }
+      }
+
+      // B. Direct Image Hash / Byte Match (Farmer's exact or cropped upload)
       if (crop.image_url && cleanBase64) {
         const cropCleanB64 = crop.image_url.replace(/^data:image\/\w+;base64,/, '');
         if (cleanBase64.startsWith(cropCleanB64.slice(0, 500)) || cropCleanB64.startsWith(cleanBase64.slice(0, 500))) {
@@ -539,7 +655,7 @@ app.post('/api/visual-search', async (req, res) => {
         }
       }
 
-      // B. Google Vision Labels / Web Entities Match
+      // C. Google Vision Labels / Web Entities Match
       if (visionTokens) {
         for (const syn of synonyms) {
           if (visionTokens.includes(syn)) {
@@ -553,21 +669,32 @@ app.post('/api/visual-search', async (req, res) => {
       }
 
       // C. Local Color Analysis Matching
-      if (colorAnalysis) {
-        if ((cropName.includes('banana') || cropName.includes('maize')) && colorAnalysis.yellowRatio > 0.3) {
-          score += (cropName.includes('banana') ? 80 : 50);
+      if (colorAnalysis && colorAnalysis.avgRGB) {
+        const [r, g, b] = colorAnalysis.avgRGB;
+
+        // Banana: high R and G, high brightness
+        if (cropName.includes('banana') && ((r > 220 && g > 190) || colorAnalysis.yellowRatio > 0.25)) {
+          score += 85;
         }
-        if (cropName.includes('carrot') && colorAnalysis.orangeRatio > 0.15) {
-          score += 80;
+        // Maize: warm golden corn, R high, G medium, low B
+        if (cropName.includes('maize') && (r > 175 && g < 185 && b < 115 && r - b > 65)) {
+          score += 85;
         }
-        if ((cropName.includes('spring') || cropName.includes('onion') || cropCategory.includes('vegetable')) && colorAnalysis.greenRatio > 0.2) {
-          score += 70;
+        // Carrot: high R, medium G, low B or orange ratio
+        if (cropName.includes('carrot') && ((r > 150 && g > 100 && b < 100 && r > g) || colorAnalysis.orangeRatio > 0.10)) {
+          score += 85;
         }
-        if (cropName.includes('cassava') && colorAnalysis.brownRatio > 0.25) {
-          score += 70;
+        // Spring onion / Leafy: green dominant
+        if ((cropName.includes('spring') || cropName.includes('onion') || cropCategory.includes('vegetable')) && (g >= r && g >= b)) {
+          score += 85;
         }
-        if ((cropName.includes('tomato') || cropName.includes('pepper')) && colorAnalysis.redRatio > 0.2) {
-          score += 80;
+        // Cassava / Yam: warm earthy tones (R: 160-220, G: 140-190, B: 120-180)
+        if (cropName.includes('cassava') && (colorAnalysis.brownRatio > 0.08 || (r > 165 && g > 145 && b > 125 && Math.abs(r - g) < 40))) {
+          score += 85;
+        }
+        // Tomato / Pepper: red dominant
+        if ((cropName.includes('tomato') || cropName.includes('pepper')) && (r > 130 && r > g * 1.2 && r > b * 1.2)) {
+          score += 85;
         }
       }
 
@@ -610,12 +737,14 @@ app.post('/api/visual-search', async (req, res) => {
       } else if (detectedLabels.length > 0) {
         const generic = ['food', 'plant', 'produce', 'vegetable', 'fruit', 'natural foods', 'ingredient', 'cuisine'];
         identifiedCrop = detectedLabels.find(l => !generic.includes(l)) || detectedLabels[0];
-      } else if (colorAnalysis) {
-        if (colorAnalysis.yellowRatio > 0.35) identifiedCrop = 'banana';
-        else if (colorAnalysis.orangeRatio > 0.2) identifiedCrop = 'carrot';
-        else if (colorAnalysis.greenRatio > 0.25) identifiedCrop = 'leafy greens';
-        else if (colorAnalysis.redRatio > 0.25) identifiedCrop = 'tomatoes';
-        else if (colorAnalysis.brownRatio > 0.3) identifiedCrop = 'cassava';
+      } else if (colorAnalysis && colorAnalysis.avgRGB) {
+        const [r, g, b] = colorAnalysis.avgRGB;
+        if (r > 220 && g > 190) identifiedCrop = 'banana';
+        else if (r > 175 && g < 185 && b < 115 && r - b > 65) identifiedCrop = 'maize';
+        else if (r > 150 && g > 100 && b < 100 && r > g) identifiedCrop = 'carrot';
+        else if (g >= r && g >= b) identifiedCrop = 'spring oion';
+        else if (r > 165 && g > 145 && b > 125 && Math.abs(r - g) < 40) identifiedCrop = 'cassava';
+        else if (r > 130 && r > g * 1.2 && r > b * 1.2) identifiedCrop = 'tomatoes';
       }
 
       if (!identifiedCrop) {
@@ -653,7 +782,9 @@ app.post('/api/visual-search', async (req, res) => {
     }
 
     // 6. Fetch knowledge card details
-    const cropKnowledge = getCropKnowledge(identifiedCrop, detectedLabels, webEntities);
+    const cropKnowledge = getCropKnowledge(identifiedCrop, detectedLabels, webEntities, geminiCropData);
+
+    const engineName = geminiCropData ? 'google-gemini-vision' : (detectedLabels.length > 0 ? 'google-cloud-vision' : 'local-visual-engine');
 
     return res.json({
       success: true,
@@ -664,7 +795,7 @@ app.post('/api/visual-search', async (req, res) => {
       crops: matchedCrops,
       knowledge: cropKnowledge,
       labels: detectedLabels.length > 0 ? detectedLabels : [identifiedCrop, 'fresh produce', 'food'],
-      visionEngine: detectedLabels.length > 0 ? 'google-cloud-vision' : 'local-visual-engine',
+      visionEngine: engineName,
       confidenceScore: highestScore
     });
   } catch (err) {
